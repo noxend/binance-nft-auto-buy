@@ -1,16 +1,14 @@
-import ora from "ora";
-import qrcode from "qrcode-terminal";
-import cliSpinners from "cli-spinners";
-import pupExtra from "puppeteer-extra";
-import puppeteerAfp from "puppeteer-afp";
-import imageDataURI from "image-data-uri";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import uaAnonimizer from "puppeteer-extra-plugin-anonymize-ua";
-import { createCursor } from "ghost-cursor";
-import { Solver } from "2captcha";
+const qrcode = require("qrcode-terminal");
+const pupExtra = require("puppeteer-extra");
+const puppeteerAfp = require("puppeteer-afp");
+const imageDataURI = require("image-data-uri");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const uaAnonimizer = require("puppeteer-extra-plugin-anonymize-ua");
+const { createCursor } = require("ghost-cursor");
+const { Solver } = require("2captcha");
 
-import config from "./config.mjs";
-import { api, pages } from "./constants.mjs";
+const config = require("./config");
+const { api, pages } = require("./constants");
 
 const solver = new Solver(config.TWO_CAPTCHA_KEY);
 
@@ -35,10 +33,9 @@ const options = {
 		width: 1440,
 		height: 700,
 	},
-}
+};
 
 pupExtra.launch(options).then(async (browser) => {
-
 	let headers = {};
 	let nftData = {};
 	let captcha = [];
@@ -48,7 +45,6 @@ pupExtra.launch(options).then(async (browser) => {
 	const page = puppeteerAfp(p);
 
 	await page.setRequestInterception(true);
-
 
 	page.on("request", (req) => {
 		if (req.url() === api.CHECK) {
@@ -63,48 +59,49 @@ pupExtra.launch(options).then(async (browser) => {
 			const json = await res.json();
 
 			if (json.code === "10000222") {
-				console.log('Ble')
-				return
+				console.log("Ble");
+				return;
 			}
 
 			headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
 			const buyResults = await page.evaluate(
-				(url, body, _headers, _captcha) => new Promise(async (resolve) => {
-					const responses = []
+				(url, body, _headers, _captcha) =>
+					new Promise(async (resolve) => {
+						const responses = [];
 
-					const awaitTimeout = (ms) =>
-						new Promise((r) => {
-							setTimeout(() => r(), ms);
-						});
+						const awaitTimeout = (ms) =>
+							new Promise((r) => {
+								setTimeout(() => r(), ms);
+							});
 
-					for (const c of _captcha) {
-						fetch(url, {
-							body: JSON.stringify(body),
-							method: "POST",
-							headers: {
-								"x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-								"device-info": _headers["device-info"],
-								"bnc-uuid": _headers["bnc-uuid"],
-								csrftoken: _headers["csrftoken"],
-								"x-nft-checkbot-token": c,
+						for (const c of _captcha) {
+							fetch(url, {
+								body: JSON.stringify(body),
+								method: "POST",
+								headers: {
+									"x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+									"device-info": _headers["device-info"],
+									"bnc-uuid": _headers["bnc-uuid"],
+									csrftoken: _headers["csrftoken"],
+									"x-nft-checkbot-token": c,
 
-								"content-type": "application/json",
-								clienttype: "web",
-							},
-						}).then(async (res) => {
-							responses.push(await res.json())
-						})
+									"content-type": "application/json",
+									clienttype: "web",
+								},
+							}).then(async (res) => {
+								responses.push(await res.json());
+							});
 
-						await awaitTimeout(250)
-					}
-
-					setInterval(() => {
-						if (responses.length === _captcha.length) {
-							resolve(responses)
+							await awaitTimeout(250);
 						}
-					}, 1000)
-				}),
+
+						setInterval(() => {
+							if (responses.length === _captcha.length) {
+								resolve(responses);
+							}
+						}, 1000);
+					}),
 				api.ORDER_CREATE,
 				{
 					amount: nftData.productDetail.amount,
@@ -115,7 +112,7 @@ pupExtra.launch(options).then(async (browser) => {
 				captcha
 			);
 
-			console.log(buyResults)
+			console.log(buyResults);
 		}
 	});
 
@@ -131,10 +128,12 @@ pupExtra.launch(options).then(async (browser) => {
 
 	qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
 
-	let spinner = ora({
-		spinner: cliSpinners.default,
-		text: "Please, scan the QR code to log in.",
-	}).start();
+	console.log("Please, scan the QR code to log in.");
+
+	// let spinner = ora({
+	// 	spinner: cliSpinners.default,
+	// 	text: "Please, scan the QR code to log in.",
+	// }).start();
 
 	await page.waitForSelector("canvas");
 
@@ -146,11 +145,11 @@ pupExtra.launch(options).then(async (browser) => {
 
 	await page.waitForResponse(api.AUTH, { timeout: 60000 });
 
-	spinner.succeed();
+	// spinner.succeed();
 
 	// ------------------------
 
-	spinner = ora("Getting NFT data.").start();
+	// spinner = ora("Getting NFT data.").start();
 
 	const { data } = await page.evaluate(
 		async (url, _headers, _nftid) => {
@@ -173,12 +172,12 @@ pupExtra.launch(options).then(async (browser) => {
 
 	nftData = data;
 
-	spinner.succeed()
+	// spinner.succeed();
 
-	spinner = ora({
-		spinner: cliSpinners.default,
-		text: "Initialization.",
-	}).start();
+	// spinner = ora({
+	// 	spinner: cliSpinners.default,
+	// 	text: "Initialization.",
+	// }).start();
 
 	// !!!!!!!!!!!!!!!!!
 
@@ -198,7 +197,7 @@ pupExtra.launch(options).then(async (browser) => {
 
 	await page.waitForNavigation({ waitUntil: "domcontentloaded" });
 
-	await page.waitForTimeout(5000)
+	await page.waitForTimeout(5000);
 
 	await page.evaluate(() => {
 		const a = document.createElement("a");
@@ -210,12 +209,14 @@ pupExtra.launch(options).then(async (browser) => {
 
 		a.textContent = "!!!";
 
-		const parent = document.querySelector('#__APP > div > div:nth-child(1) > header > div.css-11y6cix > div > div.css-1xvga6')
+		const parent = document.querySelector(
+			"#__APP > div > div:nth-child(1) > header > div.css-11y6cix > div > div.css-1xvga6"
+		);
 
-		parent.insertBefore(a, parent.firstChild)
+		parent.insertBefore(a, parent.firstChild);
 	});
 
-	await page.screenshot({ path: 'bla.png' })
+	await page.screenshot({ path: "bla.png" });
 
 	await cursor.click("#link");
 
@@ -249,13 +250,13 @@ pupExtra.launch(options).then(async (browser) => {
 
 	await page.waitForSelector(".css-mh5cnv");
 
-	spinner.succeed();
+	// spinner.succeed();
 
-	// --------------------------------
+	// // --------------------------------
 
-	spinner.start("Waiting for sale...");
+	// spinner.start("Waiting for sale...");
 
-	spinner.start("Preparing for sale...");
+	// spinner.start("Preparing for sale...");
 
 	captcha = await Promise.all(
 		Array(config.COUNT_REQUESTS)
@@ -268,7 +269,7 @@ pupExtra.launch(options).then(async (browser) => {
 			)
 	);
 
-	spinner.succeed("Preparing for sale...");
+	// spinner.succeed("Preparing for sale...");
 
 	const interval = setInterval(async () => {
 		if (1641188729000 <= Date.now()) {
@@ -277,4 +278,4 @@ pupExtra.launch(options).then(async (browser) => {
 			await cursor.click(".css-mh5cnv");
 		}
 	}, 1);
-})
+});
