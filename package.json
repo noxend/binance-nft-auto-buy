@@ -21,7 +21,8 @@
 		"puppeteer-extra-plugin-anonymize-ua": "^2.3.3",
 		"puppeteer-extra-plugin-recaptcha": "^3.5.0",
 		"puppeteer-extra-plugin-stealth": "^2.9.0",
-		"qrcode-terminal": "^0.12.0"
+		"qrcode-terminal": "^0.12.0",
+		"winston": "^3.3.3"
 	},
 	"devDependencies": {
 		"node-polyfill-webpack-plugin": "^1.1.4",

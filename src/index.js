@@ -1,3 +1,24 @@
+require("puppeteer-extra-plugin-stealth/evasions/chrome.app");
+require("puppeteer-extra-plugin-stealth/evasions/chrome.csi");
+require("puppeteer-extra-plugin-stealth/evasions/chrome.loadTimes");
+require("puppeteer-extra-plugin-stealth/evasions/chrome.runtime");
+require("puppeteer-extra-plugin-stealth/evasions/iframe.contentWindow");
+require("puppeteer-extra-plugin-stealth/evasions/media.codecs");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.hardwareConcurrency");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.languages");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.permissions");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.plugins");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.vendor");
+require("puppeteer-extra-plugin-stealth/evasions/navigator.webdriver");
+require("puppeteer-extra-plugin-stealth/evasions/sourceurl");
+require("puppeteer-extra-plugin-stealth/evasions/user-agent-override");
+require("puppeteer-extra-plugin-stealth/evasions/webgl.vendor");
+require("puppeteer-extra-plugin-stealth/evasions/window.outerdimensions");
+require("puppeteer-extra-plugin-stealth/evasions/defaultArgs");
+
+//
+
+const path = require("path");
 const qrcode = require("qrcode-terminal");
 const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
@@ -7,8 +28,20 @@ const uaAnonimizer = require("puppeteer-extra-plugin-anonymize-ua");
 const { createCursor } = require("ghost-cursor");
 const { Solver } = require("2captcha");
 
+const logger = require("./logger");
 const config = require("./config");
 const { api, pages } = require("./constants");
+
+const isPkg = typeof process.pkg !== "undefined";
+
+const chromiumExecutablePath = isPkg
+	? pupExtra
+			.executablePath()
+			.replace(
+				/^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+				path.join(path.dirname(process.execPath), "chromium")
+			)
+	: pupExtra.executablePath();
 
 const solver = new Solver(config.TWO_CAPTCHA_KEY);
 
@@ -33,6 +66,7 @@ const options = {
 		width: 1440,
 		height: 700,
 	},
+	executablePath: chromiumExecutablePath,
 };
 
 pupExtra.launch(options).then(async (browser) => {
@@ -59,7 +93,7 @@ pupExtra.launch(options).then(async (browser) => {
 			const json = await res.json();
 
 			if (json.code === "10000222") {
-				console.log("Ble");
+				logger.error(json.message);
 				return;
 			}
 
@@ -112,7 +146,15 @@ pupExtra.launch(options).then(async (browser) => {
 				captcha
 			);
 
-			console.log(buyResults);
+			const status = Array(buyResults).some(({ success }) => success);
+
+			if (status) {
+				logger.info("🥳🥳🥳");
+			}
+
+			logger.warn("😕😕😕");
+
+			logger.info("You can close the terminal.");
 		}
 	});
 
@@ -128,12 +170,7 @@ pupExtra.launch(options).then(async (browser) => {
 
 	qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
 
-	console.log("Please, scan the QR code to log in.");
-
-	// let spinner = ora({
-	// 	spinner: cliSpinners.default,
-	// 	text: "Please, scan the QR code to log in.",
-	// }).start();
+	logger.info("Please, scan the QR code to log in.");
 
 	await page.waitForSelector("canvas");
 
@@ -141,15 +178,15 @@ pupExtra.launch(options).then(async (browser) => {
 		document.querySelector("canvas").toDataURL()
 	);
 
-	await imageDataURI.outputFile(dataUri, "qr-code.png");
+	// await imageDataURI.outputFile(dataUri, "qr-code.png");
 
 	await page.waitForResponse(api.AUTH, { timeout: 60000 });
 
-	// spinner.succeed();
+	logger.info("Authorization was successful.");
 
 	// ------------------------
 
-	// spinner = ora("Getting NFT data.").start();
+	logger.info("Getting NFT data.");
 
 	const { data } = await page.evaluate(
 		async (url, _headers, _nftid) => {
@@ -172,32 +209,30 @@ pupExtra.launch(options).then(async (browser) => {
 
 	nftData = data;
 
-	// spinner.succeed();
-
-	// spinner = ora({
-	// 	spinner: cliSpinners.default,
-	// 	text: "Initialization.",
-	// }).start();
+	logger.info("Initialization.");
 
 	// !!!!!!!!!!!!!!!!!
 
 	// modal
-	await page.goto("https://www.binance.com/en/nft/home");
 
-	await page.waitForSelector(".css-1utqo5w .css-qzf033");
-	await cursor.click(".css-1utqo5w .css-qzf033");
+	await page.waitForSelector("#header_menu_ba-NFT");
+
+	await cursor.click("#header_menu_ba-NFT");
+
+	await page.waitForTimeout(3000);
+
+	await page.waitForSelector(
+		"body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
+	);
+	await cursor.click(
+		"body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
+	);
 
 	await cursor.click('a[href="/en/nft/marketplace"]');
 
 	await page.waitForSelector(".css-1ql2hru");
 
 	await cursor.move(".css-1ql2hru", { moveDelay: 10 });
-
-	await page.click('a[href="/en/nft/balance"]');
-
-	await page.waitForNavigation({ waitUntil: "domcontentloaded" });
-
-	await page.waitForTimeout(5000);
 
 	await page.evaluate(() => {
 		const a = document.createElement("a");
@@ -216,7 +251,7 @@ pupExtra.launch(options).then(async (browser) => {
 		parent.insertBefore(a, parent.firstChild);
 	});
 
-	await page.screenshot({ path: "bla.png" });
+	// await page.screenshot({ path: "bla.png" });
 
 	await cursor.click("#link");
 
@@ -250,13 +285,9 @@ pupExtra.launch(options).then(async (browser) => {
 
 	await page.waitForSelector(".css-mh5cnv");
 
-	// spinner.succeed();
-
 	// // --------------------------------
 
-	// spinner.start("Waiting for sale...");
-
-	// spinner.start("Preparing for sale...");
+	logger.info("Waiting...");
 
 	captcha = await Promise.all(
 		Array(config.COUNT_REQUESTS)
@@ -269,7 +300,7 @@ pupExtra.launch(options).then(async (browser) => {
 			)
 	);
 
-	// spinner.succeed("Preparing for sale...");
+	logger.info("Captcha resolving...");
 
 	const interval = setInterval(async () => {
 		if (1641188729000 <= Date.now()) {
@@ -278,4 +309,8 @@ pupExtra.launch(options).then(async (browser) => {
 			await cursor.click(".css-mh5cnv");
 		}
 	}, 1);
+});
+
+process.on("uncaughtException", (err) => {
+	logger.error(err.message);
 });
