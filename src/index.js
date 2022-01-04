@@ -161,7 +161,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   const cursor = createCursor(page);
 
-  await page.goto("https://accounts.binance.com/en/login");
+  page.goto("https://accounts.binance.com/en/login");
 
   const qrResponse = await p.waitForResponse(
     "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
