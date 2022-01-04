@@ -143,7 +143,7 @@ pupExtra.launch(options).then(async (browser) => {
           }),
         api.ORDER_CREATE,
         {
-          amount: nftData.productDetail.amount,
+          amount: nftData.amount,
           productId: config.NFT_ID,
           tradeType: 0,
         },
@@ -161,60 +161,13 @@ pupExtra.launch(options).then(async (browser) => {
 
   const cursor = createCursor(page);
 
-  page.goto("https://accounts.binance.com/en/login");
-
-  const qrResponse = await p.waitForResponse(
-    "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
-  );
-
-  const { data: qrData } = await qrResponse.json();
-
-  qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
-
-  logger.info("Please, scan the QR code to log in.");
-
-  await page.waitForSelector("canvas");
-
-  const dataUri = await page.evaluate(() =>
-    document.querySelector("canvas").toDataURL()
-  );
-
-  // await imageDataURI.outputFile(dataUri, "qr-code.png");
-
-  await page.waitForResponse(api.AUTH, { timeout: 60000 });
-
-  logger.info("Authorization was successful.");
-
   // ------------------------
 
-  logger.info("Getting NFT data.");
+  await authorization(page);
 
-  const { data } = await page.evaluate(
-    async (url, _headers, _nftid) => {
-      const res = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({ productId: _nftid }),
-        headers: {
-          "content-type": "application/json",
-        },
-      });
-
-      const data = await res.json();
-
-      return data;
-    },
-    api.PRODUCT_DETAIL,
-    headers,
-    config.NFT_ID
-  );
-
-  nftData = data;
+  nftData = await getProductDetails(page);
 
   logger.info("Waitin for start sale...");
-
-  // !!!!!!!!!!!!!!!!!
-
-  // modal
 
   await page.waitForSelector("#header_menu_ba-NFT");
 
@@ -339,3 +292,61 @@ pupExtra.launch(options).then(async (browser) => {
 process.on("uncaughtException", (err) => {
   logger.error(err.message);
 });
+
+const authorization = async (page) => {
+  page.goto("https://accounts.binance.com/en/login");
+
+  const qrResponse = await page.waitForResponse(
+    "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
+  );
+
+  const { data: qrData } = await qrResponse.json();
+
+  qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
+
+  logger.info("Please, scan the QR code to log in.");
+
+  await page.waitForSelector("canvas");
+
+  const dataUri = await page.evaluate(() =>
+    document.querySelector("canvas").toDataURL()
+  );
+
+  // await imageDataURI.outputFile(dataUri, "qr-code.png");
+
+  await page.waitForResponse(api.AUTH, { timeout: 60000 });
+
+  logger.info("Authorization was successful.");
+};
+
+const getProductDetails = async (page) => {
+  logger.info("Getting NFT data...");
+
+  const data = await page.evaluate(
+    async (url, nftid) => {
+      const res = await fetch(url, {
+        method: "POST",
+        body: JSON.stringify({ productId: nftid }),
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+
+      const { data } = await res.json();
+
+      return data;
+    },
+    api.PRODUCT_DETAIL,
+    config.NFT_ID
+  );
+
+  const formttedData = {
+    title: data.productDetail.title,
+    amount: data.productDetail.amount,
+    currency: data.productDetail.currency,
+  };
+
+  console.log(formttedData);
+
+  return formttedData;
+};
