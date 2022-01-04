@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "pkg ./src/index.js --public --targets node16-win-x64 --out-path build --compress Brotli",
+		"build": "pkg ./src/index.js --public --targets node16-win-x64 --out-path build",
 		"copy": "Copy-Item -Path .\\node_modules\\puppeteer\\.local-chromium -Destination .\\build\\chromium\\ -Recurse"
 	},
 	"keywords": [],
@@ -12,6 +12,8 @@
 	"license": "ISC",
 	"dependencies": {
 		"2captcha": "^2.1.10",
+		"cli-color": "^2.0.1",
+		"cli-progress": "^3.9.1",
 		"dotenv": "^10.0.0",
 		"ghost-cursor": "^1.1.8",
 		"image-data-uri": "^2.0.1",
