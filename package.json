@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "pkg ./src/index.js --public --targets node16-win-x64 --out-path build",
+		"build": "pkg ./src/index.js --public --targets node16-win-x64 --out-path build --compress Brotli",
 		"copy": "Copy-Item -Path .\\node_modules\\puppeteer\\.local-chromium -Destination .\\build\\chromium\\ -Recurse"
 	},
 	"keywords": [],

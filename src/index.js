@@ -35,282 +35,307 @@ const { api, pages } = require("./constants");
 const isPkg = typeof process.pkg !== "undefined";
 
 const chromiumExecutablePath = isPkg
-	? pupExtra
-			.executablePath()
-			.replace(
-				/^.*?\\node_modules\\puppeteer\\\.local-chromium/,
-				path.join(path.dirname(process.execPath), "chromium")
-			)
-	: pupExtra.executablePath();
+  ? pupExtra
+      .executablePath()
+      .replace(
+        /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+        path.join(path.dirname(process.execPath), "chromium")
+      )
+  : pupExtra.executablePath();
 
 const solver = new Solver(config.TWO_CAPTCHA_KEY);
 
 const args = [
-	"--no-sandbox",
-	"--disable-setuid-sandbox",
-	"--disable-infobars",
-	"--window-position=0,0",
-	"--ignore-certifcate-errors",
-	"--ignore-certifcate-errors-spki-list",
-	'--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-infobars",
+  "--window-position=0,0",
+  "--ignore-certifcate-errors",
+  "--ignore-certifcate-errors-spki-list",
+  '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
 ];
 
 pupExtra.use(StealthPlugin());
 pupExtra.use(uaAnonimizer());
 
 const options = {
-	args,
-	headless: true,
-	ignoreHTTPSErrors: true,
-	defaultViewport: {
-		width: 1440,
-		height: 700,
-	},
-	executablePath: chromiumExecutablePath,
+  args,
+  headless: true,
+  ignoreHTTPSErrors: true,
+  defaultViewport: {
+    width: 1440,
+    height: 720,
+  },
+  executablePath: chromiumExecutablePath,
 };
 
+const randomIntFromInterval = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1) + min);
+
 pupExtra.launch(options).then(async (browser) => {
-	let headers = {};
-	let nftData = {};
-	let captcha = [];
-
-	const [p] = await browser.pages();
-
-	const page = puppeteerAfp(p);
-
-	await page.setRequestInterception(true);
-
-	page.on("request", (req) => {
-		if (req.url() === api.CHECK) {
-			headers = req.headers();
-		}
+  logger.info("Initialization...");
+
+  let headers = {};
+  let nftData = {};
+  let captcha = [];
+
+  const [p] = await browser.pages();
 
-		req.continue();
-	});
+  const page = puppeteerAfp(p);
 
-	page.on("response", async (res) => {
-		if (res.url() === api.PRODUCT_ONSLACE) {
-			const json = await res.json();
+  await page.setRequestInterception(true);
 
-			if (json.code === "10000222") {
-				logger.error(json.message);
-				return;
-			}
+  page.on("request", (req) => {
+    if (req.url() === api.CHECK) {
+      headers = req.headers();
+    }
 
-			headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
+    req.continue();
+  });
 
-			const buyResults = await page.evaluate(
-				(url, body, _headers, _captcha) =>
-					new Promise(async (resolve) => {
-						const responses = [];
+  page.on("response", async (res) => {
+    if (res.url() === api.PRODUCT_ONSLACE) {
+      const json = await res.json();
 
-						const awaitTimeout = (ms) =>
-							new Promise((r) => {
-								setTimeout(() => r(), ms);
-							});
+      if (json.code === "10000222") {
+        logger.error(json.message);
+        return;
+      }
 
-						for (const c of _captcha) {
-							fetch(url, {
-								body: JSON.stringify(body),
-								method: "POST",
-								headers: {
-									"x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-									"device-info": _headers["device-info"],
-									"bnc-uuid": _headers["bnc-uuid"],
-									csrftoken: _headers["csrftoken"],
-									"x-nft-checkbot-token": c,
+      headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
-									"content-type": "application/json",
-									clienttype: "web",
-								},
-							}).then(async (res) => {
-								responses.push(await res.json());
-							});
+      const buyResults = await page.evaluate(
+        (url, body, _headers, _captcha) =>
+          new Promise(async (resolve) => {
+            const responses = [];
 
-							await awaitTimeout(250);
-						}
+            const wait = (ms) =>
+              new Promise((r) => {
+                setTimeout(() => r(), ms);
+              });
 
-						setInterval(() => {
-							if (responses.length === _captcha.length) {
-								resolve(responses);
-							}
-						}, 1000);
-					}),
-				api.ORDER_CREATE,
-				{
-					amount: nftData.productDetail.amount,
-					productId: config.NFT_ID,
-					tradeType: 0,
-				},
-				headers,
-				captcha
-			);
+            for (const c of _captcha) {
+              fetch(url, {
+                body: JSON.stringify(body),
+                method: "POST",
+                headers: {
+                  "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+                  "device-info": _headers["device-info"],
+                  "bnc-uuid": _headers["bnc-uuid"],
+                  csrftoken: _headers["csrftoken"],
+                  "x-nft-checkbot-token": c,
 
-			const status = Array(buyResults).some(({ success }) => success);
+                  "content-type": "application/json",
+                  clienttype: "web",
+                },
+              }).then(async (res) => {
+                responses.push(await res.json());
+              });
 
-			if (status) {
-				logger.info("🥳🥳🥳");
-			}
+              await wait(250);
+            }
 
-			logger.warn("😕😕😕");
+            setInterval(() => {
+              if (responses.length === _captcha.length) {
+                resolve(responses);
+              }
+            }, 1000);
+          }),
+        api.ORDER_CREATE,
+        {
+          amount: nftData.productDetail.amount,
+          productId: config.NFT_ID,
+          tradeType: 0,
+        },
+        headers,
+        captcha
+      );
 
-			logger.info("You can close the terminal.");
-		}
-	});
+      const status = Array(buyResults).some(({ success }) => success);
 
-	const cursor = createCursor(page);
+      console.log(buyResults);
 
-	await page.goto("https://accounts.binance.com/en/login");
+      logger.info("You can close the terminal.");
+    }
+  });
 
-	const qrResponse = await p.waitForResponse(
-		"https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
-	);
+  const cursor = createCursor(page);
 
-	const { data: qrData } = await qrResponse.json();
+  await page.goto("https://accounts.binance.com/en/login");
 
-	qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
+  const qrResponse = await p.waitForResponse(
+    "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
+  );
 
-	logger.info("Please, scan the QR code to log in.");
+  const { data: qrData } = await qrResponse.json();
 
-	await page.waitForSelector("canvas");
+  qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
 
-	const dataUri = await page.evaluate(() =>
-		document.querySelector("canvas").toDataURL()
-	);
+  logger.info("Please, scan the QR code to log in.");
 
-	// await imageDataURI.outputFile(dataUri, "qr-code.png");
+  await page.waitForSelector("canvas");
 
-	await page.waitForResponse(api.AUTH, { timeout: 60000 });
+  const dataUri = await page.evaluate(() =>
+    document.querySelector("canvas").toDataURL()
+  );
 
-	logger.info("Authorization was successful.");
+  // await imageDataURI.outputFile(dataUri, "qr-code.png");
 
-	// ------------------------
+  await page.waitForResponse(api.AUTH, { timeout: 60000 });
 
-	logger.info("Getting NFT data.");
+  logger.info("Authorization was successful.");
 
-	const { data } = await page.evaluate(
-		async (url, _headers, _nftid) => {
-			const res = await fetch(url, {
-				method: "POST",
-				body: JSON.stringify({ productId: _nftid }),
-				headers: {
-					"content-type": "application/json",
-				},
-			});
+  // ------------------------
 
-			const data = await res.json();
+  logger.info("Getting NFT data.");
 
-			return data;
-		},
-		api.PRODUCT_DETAIL,
-		headers,
-		config.NFT_ID
-	);
+  const { data } = await page.evaluate(
+    async (url, _headers, _nftid) => {
+      const res = await fetch(url, {
+        method: "POST",
+        body: JSON.stringify({ productId: _nftid }),
+        headers: {
+          "content-type": "application/json",
+        },
+      });
 
-	nftData = data;
+      const data = await res.json();
 
-	logger.info("Initialization.");
+      return data;
+    },
+    api.PRODUCT_DETAIL,
+    headers,
+    config.NFT_ID
+  );
 
-	// !!!!!!!!!!!!!!!!!
+  nftData = data;
 
-	// modal
+  logger.info("Waitin for start sale...");
 
-	await page.waitForSelector("#header_menu_ba-NFT");
+  // !!!!!!!!!!!!!!!!!
 
-	await cursor.click("#header_menu_ba-NFT");
+  // modal
 
-	await page.waitForTimeout(3000);
+  await page.waitForSelector("#header_menu_ba-NFT");
 
-	await page.waitForSelector(
-		"body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
-	);
-	await cursor.click(
-		"body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
-	);
+  await cursor.click("#header_menu_ba-NFT");
 
-	await cursor.click('a[href="/en/nft/marketplace"]');
+  await page.waitForTimeout(3000);
 
-	await page.waitForSelector(".css-1ql2hru");
+  await page.waitForSelector(
+    "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
+  );
+  await cursor.click(
+    "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
+  );
 
-	await cursor.move(".css-1ql2hru", { moveDelay: 10 });
+  await cursor.click('a[href="/en/nft/marketplace"]');
 
-	await page.evaluate(() => {
-		const a = document.createElement("a");
+  await page.waitForSelector(".css-1ql2hru");
 
-		a.setAttribute("href", "/en/nft/goods/sale/2");
-		a.setAttribute("data-bn-type", "text");
-		a.setAttribute("class", "css-7x232n");
-		a.setAttribute("id", "link");
+  await cursor.move(".css-1ql2hru", {
+    moveDelay: randomIntFromInterval(50, 100),
+  });
 
-		a.textContent = "!!!";
+  await page.evaluate((id) => {
+    const a = document.createElement("a");
 
-		const parent = document.querySelector(
-			"#__APP > div > div:nth-child(1) > header > div.css-11y6cix > div > div.css-1xvga6"
-		);
+    a.setAttribute("href", `/en/nft/goods/sale/${id}`);
+    a.setAttribute("data-bn-type", "text");
+    a.setAttribute("class", "css-7x232n");
+    a.setAttribute("id", "link");
 
-		parent.insertBefore(a, parent.firstChild);
-	});
+    a.textContent = "!!!";
 
-	// await page.screenshot({ path: "bla.png" });
+    const parent = document.querySelector(
+      "#__APP > div > div:nth-child(1) > header > div.css-11y6cix > div > div.css-1xvga6"
+    );
 
-	await cursor.click("#link");
+    parent.insertBefore(a, parent.firstChild);
+  }, config.NFT_SALE_ID);
 
-	await page.waitForTimeout(5000);
+  // await page.screenshot({ path: "bla.png" });
 
-	await cursor.click(".css-193cfqa div:nth-child(2)");
+  await cursor.click("#link");
 
-	await cursor.click(".css-193cfqa div:nth-child(1)");
+  await page.waitForTimeout(5000);
 
-	await cursor.move('div[type="img"]');
+  await cursor.click(".css-193cfqa div:nth-child(2)");
 
-	await cursor.move(
-		"#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(10) > div.css-13lidqh"
-	);
+  await cursor.move('div[type="img"]', {
+    moveDelay: randomIntFromInterval(50, 100),
+  });
 
-	await cursor.move(
-		"#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(7) > div.css-193cfqa > div.css-17fr0o"
-	);
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-suffix.css-vurnku > div > div.bn-input-md.css-1vd5j1n"
+  );
 
-	await cursor.click(
-		"#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-suffix.css-vurnku > div > div.bn-input-md.css-1vd5j1n"
-	);
+  await cursor.click("#ETH");
 
-	await cursor.click("#ETH");
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input"
+  );
 
-	await cursor.click(".inputNumber input");
+  await page.type(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
+    "0.5",
+    { delay: randomIntFromInterval(50, 100) }
+  );
 
-	await page.type(".inputNumber input", "0.5", { delay: 12 });
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(6) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input"
+  );
 
-	await cursor.click(".css-7y16gy .css-19xplxv");
+  await page.type(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
+    "2",
+    { delay: randomIntFromInterval(50, 100) }
+  );
 
-	await page.waitForSelector(".css-mh5cnv");
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(3)",
+    { moveDelay: randomIntFromInterval(50, 100) }
+  );
 
-	// // --------------------------------
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(7)",
+    { moveDelay: randomIntFromInterval(50, 100) }
+  );
 
-	logger.info("Waiting...");
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-19xplxv"
+  );
 
-	captcha = await Promise.all(
-		Array(config.COUNT_REQUESTS)
-			.fill()
-			.map(() =>
-				solver
-					.recaptcha(config.GOOGLE_KEY, pages.SALE(config.NFT_SALE_ID))
-					.then(({ data }) => data)
-					.catch(() => null)
-			)
-	);
+  await page.waitForSelector("body > div.css-vp41bv > div > svg");
 
-	logger.info("Captcha resolving...");
+  await cursor.move("body > div.css-vp41bv > div > svg", {
+    moveDelay: randomIntFromInterval(50, 100),
+  });
 
-	const interval = setInterval(async () => {
-		if (1641188729000 <= Date.now()) {
-			clearInterval(interval);
+  // // --------------------------------
 
-			await cursor.click(".css-mh5cnv");
-		}
-	}, 1);
+  logger.info("Captcha resolving...");
+
+  captcha = await Promise.all(
+    Array(config.COUNT_REQUESTS)
+      .fill()
+      .map(() =>
+        solver
+          .recaptcha(config.GOOGLE_KEY, pages.SALE(config.NFT_SALE_ID))
+          .then(({ data }) => data)
+          .catch(() => null)
+      )
+  );
+
+  const interval = setInterval(async () => {
+    if (0 <= Date.now()) {
+      clearInterval(interval);
+
+      await cursor.click(".css-mh5cnv");
+    }
+  }, 1);
 });
 
 process.on("uncaughtException", (err) => {
-	logger.error(err.message);
+  logger.error(err.message);
 });
