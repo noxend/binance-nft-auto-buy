@@ -12,7 +12,6 @@ const bar1 = new cliProgress.SingleBar({
 const endDate = 1641292235000;
 const diff = endDate - Date.now();
 
-// start the progress bar with a total value of 200 and start value of 0
 bar1.start(diff, 0);
 
 const interval = setInterval(() => {
@@ -25,6 +24,4 @@ const interval = setInterval(() => {
     bar1.stop();
     return;
   }
-
-  // console.log(/);
 }, 1);

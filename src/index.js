@@ -256,6 +256,11 @@ pupExtra.launch(options).then(async (browser) => {
   );
 
   await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(1)",
+    { moveDelay: randomIntFromInterval(50, 100) }
+  );
+
+  await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-19xplxv"
   );
 
@@ -287,10 +292,6 @@ pupExtra.launch(options).then(async (browser) => {
       await cursor.click(".css-mh5cnv");
     }
   }, 1);
-});
-
-process.on("uncaughtException", (err) => {
-  logger.error(err.message);
 });
 
 const authorization = async (page) => {
@@ -350,3 +351,7 @@ const getProductDetails = async (page) => {
 
   return formttedData;
 };
+
+process.on("uncaughtException", (err) => {
+  logger.error(err.message);
+});
