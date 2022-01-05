@@ -20,4 +20,12 @@ const waitToTimeSync = (timestamp) => {
   }
 };
 
-module.exports = { waitToTime, waitToTimeSync };
+const wait = (ms) =>
+  new Promise((r) => {
+    setTimeout(() => r(), ms);
+  });
+
+const randomRange = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1) + min);
+
+module.exports = { waitToTime, waitToTimeSync, wait, randomRange };

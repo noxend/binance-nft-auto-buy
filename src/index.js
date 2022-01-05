@@ -26,11 +26,13 @@ const imageDataURI = require("image-data-uri");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const uaAnonimizer = require("puppeteer-extra-plugin-anonymize-ua");
 const { createCursor } = require("ghost-cursor");
+const UserAgent = require("user-agents");
 const { Solver } = require("2captcha");
 
 const logger = require("./logger");
 const config = require("./config");
 const { api, pages } = require("./constants");
+const { wait, randomRange } = require("./utils");
 
 const isPkg = typeof process.pkg !== "undefined";
 
@@ -62,15 +64,10 @@ const options = {
   args,
   headless: true,
   ignoreHTTPSErrors: true,
-  defaultViewport: {
-    width: 1440,
-    height: 720,
-  },
   executablePath: chromiumExecutablePath,
 };
 
-const randomIntFromInterval = (min, max) =>
-  Math.floor(Math.random() * (max - min + 1) + min);
+const userAgent = new UserAgent();
 
 pupExtra.launch(options).then(async (browser) => {
   logger.info("Initialization...");
@@ -83,6 +80,17 @@ pupExtra.launch(options).then(async (browser) => {
 
   const page = puppeteerAfp(p);
 
+  await page.setViewport({
+    width: userAgent.data.viewportWidth,
+    height: userAgent.data.viewportHeight,
+    deviceScaleFactor: 1,
+    isLandscape: false,
+    hasTouch: false,
+    isMobile: false,
+  });
+
+  await page.setUserAgent(userAgent.data.userAgent);
+
   await page.setRequestInterception(true);
 
   page.on("request", (req) => {
@@ -90,74 +98,85 @@ pupExtra.launch(options).then(async (browser) => {
       headers = req.headers();
     }
 
+    if (
+      req.resourceType() == "stylesheet" ||
+      req.resourceType() == "font" ||
+      req.resourceType() == "image"
+    ) {
+      req.abort();
+      return;
+    }
+
     req.continue();
   });
 
-  page.on("response", async (res) => {
-    if (res.url() === api.PRODUCT_ONSLACE) {
-      const json = await res.json();
+  // page.on("response", async (res) => {
+  //   if (res.url() === api.PRODUCT_ONSLACE) {
+  //     const json = await res.json();
 
-      if (json.code === "10000222") {
-        logger.error(json.message);
-        return;
-      }
+  //     if (json.code === "10000222") {
+  //       logger.error(json.message);
+  //       return;
+  //     }
 
-      headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
+  //     headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
-      const buyResults = await page.evaluate(
-        (url, body, _headers, _captcha) =>
-          new Promise(async (resolve) => {
-            const responses = [];
+  //     const buyResults = await page.evaluate(
+  //       (url, body, _headers, _captcha) =>
+  //         new Promise(async (resolve) => {
+  //           const responses = [];
 
-            const wait = (ms) =>
-              new Promise((r) => {
-                setTimeout(() => r(), ms);
-              });
+  //           const wait = (ms) =>
+  //             new Promise((r) => {
+  //               setTimeout(() => r(), ms);
+  //             });
 
-            for (const c of _captcha) {
-              fetch(url, {
-                body: JSON.stringify(body),
-                method: "POST",
-                headers: {
-                  "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-                  "device-info": _headers["device-info"],
-                  "bnc-uuid": _headers["bnc-uuid"],
-                  csrftoken: _headers["csrftoken"],
-                  "x-nft-checkbot-token": c,
+  //           const count = Array(Number(config.COUNT_REQUESTS)).fill();
 
-                  "content-type": "application/json",
-                  clienttype: "web",
-                },
-              }).then(async (res) => {
-                responses.push(await res.json());
-              });
+  //           for (const c of count) {
+  //             fetch(url, {
+  //               body: JSON.stringify(body),
+  //               method: "POST",
+  //               headers: {
+  //                 "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+  //                 "device-info": _headers["device-info"],
+  //                 "bnc-uuid": _headers["bnc-uuid"],
+  //                 csrftoken: _headers["csrftoken"],
+  //                 "x-nft-checkbot-token": _captcha[0],
 
-              await wait(250);
-            }
+  //                 "content-type": "application/json",
+  //                 clienttype: "web",
+  //               },
+  //             }).then(async (res) => {
+  //               responses.push(await res.json());
+  //             });
 
-            setInterval(() => {
-              if (responses.length === _captcha.length) {
-                resolve(responses);
-              }
-            }, 1000);
-          }),
-        api.ORDER_CREATE,
-        {
-          amount: nftData.amount,
-          productId: config.NFT_ID,
-          tradeType: 0,
-        },
-        headers,
-        captcha
-      );
+  //             await wait(10);
+  //           }
 
-      const status = Array(buyResults).some(({ success }) => success);
+  //           setInterval(() => {
+  //             if (responses.length === _captcha.length) {
+  //               resolve(responses);
+  //             }
+  //           }, 1000);
+  //         }),
+  //       api.ORDER_CREATE,
+  //       {
+  //         amount: nftData.amount,
+  //         productId: config.NFT_ID,
+  //         tradeType: 0,
+  //       },
+  //       headers,
+  //       captcha
+  //     );
 
-      console.log(buyResults);
+  //     const status = Array(buyResults).some(({ success }) => success);
 
-      logger.info("You can close the terminal.");
-    }
-  });
+  //     console.log(buyResults);
+
+  //     logger.info("You can close the terminal.");
+  //   }
+  // });
 
   const cursor = createCursor(page);
 
@@ -187,7 +206,7 @@ pupExtra.launch(options).then(async (browser) => {
   await page.waitForSelector(".css-1ql2hru");
 
   await cursor.move(".css-1ql2hru", {
-    moveDelay: randomIntFromInterval(50, 100),
+    moveDelay: randomRange(50, 100),
   });
 
   await page.evaluate((id) => {
@@ -211,12 +230,30 @@ pupExtra.launch(options).then(async (browser) => {
 
   await cursor.click("#link");
 
-  await page.waitForTimeout(5000);
+  await page.waitForResponse(
+    "https://www.binance.com/bapi/nft/v2/public/nft/nft-trade/onsale-config"
+  );
 
-  await cursor.click(".css-193cfqa div:nth-child(2)");
+  await page.waitForSelector(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o"
+  );
+
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o",
+    {
+      moveDelay: randomRange(500, 1000),
+    }
+  );
+
+  await cursor.click(
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(8) > div.css-1hjlitu > div:nth-child(3)",
+    {
+      moveDelay: randomRange(500, 1000),
+    }
+  );
 
   await cursor.move('div[type="img"]', {
-    moveDelay: randomIntFromInterval(50, 100),
+    moveDelay: randomRange(500, 1000),
   });
 
   await cursor.click(
@@ -232,7 +269,7 @@ pupExtra.launch(options).then(async (browser) => {
   await page.type(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
     "0.5",
-    { delay: randomIntFromInterval(50, 100) }
+    { delay: randomRange(500, 1000) }
   );
 
   await cursor.click(
@@ -242,23 +279,27 @@ pupExtra.launch(options).then(async (browser) => {
   await page.type(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
     "2",
-    { delay: randomIntFromInterval(50, 100) }
+    { delay: randomRange(500, 1000) }
   );
+
+  //
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(3)",
-    { moveDelay: randomIntFromInterval(50, 100) }
+    { moveDelay: randomRange(500, 1000) }
   );
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(7)",
-    { moveDelay: randomIntFromInterval(50, 100) }
+    { moveDelay: randomRange(500, 1000) }
   );
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(1)",
-    { moveDelay: randomIntFromInterval(50, 100) }
+    { moveDelay: randomRange(500, 1000) }
   );
+
+  //
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-19xplxv"
@@ -267,31 +308,33 @@ pupExtra.launch(options).then(async (browser) => {
   await page.waitForSelector("body > div.css-vp41bv > div > svg");
 
   await cursor.move("body > div.css-vp41bv > div > svg", {
-    moveDelay: randomIntFromInterval(50, 100),
+    moveDelay: randomRange(500, 1000),
+  });
+
+  await cursor.move(".css-mh5cnv", {
+    moveDelay: randomRange(500, 1000),
   });
 
   // // --------------------------------
 
   logger.info("Captcha resolving...");
 
-  captcha = await Promise.all(
-    Array(config.COUNT_REQUESTS)
-      .fill()
-      .map(() =>
-        solver
-          .recaptcha(config.GOOGLE_KEY, pages.SALE(config.NFT_SALE_ID))
-          .then(({ data }) => data)
-          .catch(() => null)
-      )
-  );
+  // captcha = await Promise.all(
+  //   Array(1)
+  //     .fill()
+  //     .map(() =>
+  //       solver
+  //         .recaptcha(config.GOOGLE_KEY, pages.SALE(config.NFT_ID))
+  //         .then(({ data }) => data)
+  //         .catch(() => null)
+  //     )
+  // );
 
-  const interval = setInterval(async () => {
-    if (0 <= Date.now()) {
-      clearInterval(interval);
+  await page.click(".css-mh5cnv");
 
-      await cursor.click(".css-mh5cnv");
-    }
-  }, 1);
+  const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
+
+  console.log(await response.json());
 });
 
 const authorization = async (page) => {
