@@ -1,37 +1,46 @@
 {
-	"name": "binance-nft-auto-buy",
-	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
-	"scripts": {
-		"build": "pkg ./src/index.js --public --targets node16-win-x64 --out-path build",
-		"copy": "Copy-Item -Path .\\node_modules\\puppeteer\\.local-chromium -Destination .\\build\\chromium\\ -Recurse"
-	},
-	"keywords": [],
-	"author": "NXND",
-	"license": "ISC",
-	"dependencies": {
-		"2captcha": "^2.1.10",
-		"cli-color": "^2.0.1",
-		"cli-progress": "^3.9.1",
-		"dotenv": "^10.0.0",
-		"ghost-cursor": "^1.1.8",
-		"image-data-uri": "^2.0.1",
-		"puppeteer": "^13.0.1",
-		"puppeteer-afp": "^1.0.1",
-		"puppeteer-extra": "^3.2.3",
-		"puppeteer-extra-plugin-adblocker": "^2.12.0",
-		"puppeteer-extra-plugin-anonymize-ua": "^2.3.3",
-		"puppeteer-extra-plugin-recaptcha": "^3.5.0",
-		"puppeteer-extra-plugin-stealth": "^2.9.0",
-		"qrcode-terminal": "^0.12.0",
-		"user-agents": "^1.0.887",
-		"winston": "^3.3.3"
-	},
-	"devDependencies": {
-		"node-polyfill-webpack-plugin": "^1.1.4",
-		"webpack": "^5.65.0",
-		"webpack-cli": "^4.9.1",
-		"webpack-obfuscator": "^3.5.0"
-	}
+  "name": "binance-nft-auto-buy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "pkg src/index.js --public --targets node16-win-x64 --out-path build --config package.json",
+    "copy": "Copy-Item -Path .\\node_modules\\puppeteer\\.local-chromium -Destination .\\build\\chromium\\ -Recurse"
+  },
+  "keywords": [],
+  "author": "NXND",
+  "license": "ISC",
+  "dependencies": {
+    "2captcha": "^2.1.10",
+    "chalk": "^5.0.0",
+    "cli-color": "^2.0.1",
+    "cli-progress": "^3.9.1",
+    "commander": "^8.3.0",
+    "dotenv": "^10.0.0",
+    "figlet": "^1.5.2",
+    "ghost-cursor": "^1.1.8",
+    "image-data-uri": "^2.0.1",
+    "puppeteer": "^13.0.1",
+    "puppeteer-afp": "^1.0.1",
+    "puppeteer-extra": "^3.2.3",
+    "puppeteer-extra-plugin-adblocker": "^2.12.0",
+    "puppeteer-extra-plugin-anonymize-ua": "^2.3.3",
+    "puppeteer-extra-plugin-recaptcha": "^3.5.0",
+    "puppeteer-extra-plugin-stealth": "^2.9.0",
+    "qrcode-terminal": "^0.12.0",
+    "user-agents": "^1.0.887",
+    "winston": "^3.3.3"
+  },
+  "devDependencies": {
+    "node-polyfill-webpack-plugin": "^1.1.4",
+    "webpack": "^5.65.0",
+    "webpack-cli": "^4.9.1",
+    "webpack-obfuscator": "^3.5.0"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/figlet/fonts/*",
+      "node_modules/puppeteer-extra-plugin-stealth/**/*.*"
+    ]
+  }
 }

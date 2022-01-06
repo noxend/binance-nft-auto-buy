@@ -1,24 +1,6 @@
-require("puppeteer-extra-plugin-stealth/evasions/chrome.app");
-require("puppeteer-extra-plugin-stealth/evasions/chrome.csi");
-require("puppeteer-extra-plugin-stealth/evasions/chrome.loadTimes");
-require("puppeteer-extra-plugin-stealth/evasions/chrome.runtime");
-require("puppeteer-extra-plugin-stealth/evasions/iframe.contentWindow");
-require("puppeteer-extra-plugin-stealth/evasions/media.codecs");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.hardwareConcurrency");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.languages");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.permissions");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.plugins");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.vendor");
-require("puppeteer-extra-plugin-stealth/evasions/navigator.webdriver");
-require("puppeteer-extra-plugin-stealth/evasions/sourceurl");
-require("puppeteer-extra-plugin-stealth/evasions/user-agent-override");
-require("puppeteer-extra-plugin-stealth/evasions/webgl.vendor");
-require("puppeteer-extra-plugin-stealth/evasions/window.outerdimensions");
-require("puppeteer-extra-plugin-stealth/evasions/defaultArgs");
-
-//
-
 const path = require("path");
+const figlet = require("figlet");
+const UserAgent = require("user-agents");
 const qrcode = require("qrcode-terminal");
 const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
@@ -26,16 +8,31 @@ const imageDataURI = require("image-data-uri");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
-const UserAgent = require("user-agents");
-const { Solver } = require("2captcha");
+const clc = require("cli-color");
 
 const logger = require("./logger");
 const config = require("./config");
 const { waitToTime, randomRange } = require("./utils");
 const { startTimeProgressBar } = require("./test");
-const { api, pages } = require("./constants");
+const { api } = require("./constants");
 
 const isPkg = typeof process.pkg !== "undefined";
+
+console.log(
+  clc.yellow(
+    figlet.textSync("Binance NFT bot by", {
+      font: "Small Slant",
+    })
+  )
+);
+
+console.log(
+  clc.red(
+    figlet.textSync("NXND", {
+      font: "Slant",
+    })
+  )
+);
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
@@ -45,8 +42,6 @@ const chromiumExecutablePath = isPkg
         path.join(path.dirname(process.execPath), "chromium")
       )
   : pupExtra.executablePath();
-
-const solver = new Solver(config.TWO_CAPTCHA_KEY);
 
 const args = [
   "--no-sandbox",
@@ -70,14 +65,11 @@ const options = {
 
 const userAgent = new UserAgent({ deviceCategory: "desktop" });
 
-const endTme = Date.now() + 1000 * 60 * 2;
-
 pupExtra.launch(options).then(async (browser) => {
   logger.info("Initialization...");
 
   let headers = {};
   let nftData = {};
-  let captcha = [];
 
   const [p] = await browser.pages();
 
@@ -153,7 +145,7 @@ pupExtra.launch(options).then(async (browser) => {
   page.on("response", (res) => {
     if (res.url() === api.ORDER_CREATE) {
       res.json().then(({ success }) => {
-        if (success) logger.success(data.message);
+        if (success) logger.success("🥳");
         else logger.warn(data.message);
       });
     }
@@ -161,13 +153,15 @@ pupExtra.launch(options).then(async (browser) => {
 
   const cursor = createCursor(page);
 
+  logger.success("Initialization completed.");
+
   // ------------------------
 
   await authorization(page);
 
   nftData = await getProductDetails(page);
 
-  logger.info("Waitin for start sale...");
+  logger.info("Bypass captcha...");
 
   await page.waitForSelector("#header_menu_ba-NFT");
 
@@ -218,22 +212,14 @@ pupExtra.launch(options).then(async (browser) => {
   );
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o",
-    {
-      moveDelay: randomRange(500, 1000),
-    }
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o"
   );
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(8) > div.css-1hjlitu > div:nth-child(3)",
-    {
-      moveDelay: randomRange(500, 1000),
-    }
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(8) > div.css-1hjlitu > div:nth-child(3)"
   );
 
-  await cursor.move('div[type="img"]', {
-    moveDelay: randomRange(500, 1000),
-  });
+  await cursor.move('div[type="img"]');
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-suffix.css-vurnku > div > div.bn-input-md.css-1vd5j1n"
@@ -247,8 +233,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   await page.type(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
-    "0.5",
-    { delay: randomRange(500, 1000) }
+    "0.5"
   );
 
   await cursor.click(
@@ -257,25 +242,21 @@ pupExtra.launch(options).then(async (browser) => {
 
   await page.type(
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
-    "2",
-    { delay: randomRange(500, 1000) }
+    "2"
   );
 
   //
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(3)",
-    { moveDelay: randomRange(500, 1000) }
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(3)"
   );
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(7)",
-    { moveDelay: randomRange(500, 1000) }
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(7)"
   );
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(1)",
-    { moveDelay: randomRange(500, 1000) }
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(1)"
   );
 
   //
@@ -286,19 +267,17 @@ pupExtra.launch(options).then(async (browser) => {
 
   await page.waitForSelector("body > div.css-vp41bv > div > svg");
 
-  await cursor.move("body > div.css-vp41bv > div > svg", {
-    moveDelay: randomRange(500, 1000),
-  });
+  await cursor.move("body > div.css-vp41bv > div > svg");
 
-  await cursor.move(".css-mh5cnv", {
-    moveDelay: randomRange(500, 1000),
-  });
+  await cursor.move(".css-mh5cnv");
 
   // // --------------------------------
 
-  startTimeProgressBar(endTme - 3000);
+  logger.info("Waiting for the sale to start...");
 
-  await waitToTime(endTme - 3000);
+  startTimeProgressBar(nftData.setStartTime - 3000);
+
+  await waitToTime(nftData.setStartTime - 3000);
 
   await page.click(".css-mh5cnv");
 
@@ -311,9 +290,9 @@ pupExtra.launch(options).then(async (browser) => {
 
   headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
-  await waitToTime(endTme - 1000);
+  await waitToTime(nftData.setStartTime - 1000);
 
-  logger.info("sending requests...");
+  logger.info("Sending requests...");
 
   await page.evaluate(
     async (url, body, _headers, countRequests) => {
@@ -331,7 +310,8 @@ pupExtra.launch(options).then(async (browser) => {
             "device-info": _headers["device-info"],
             "bnc-uuid": _headers["bnc-uuid"],
             csrftoken: _headers["csrftoken"],
-            "x-nft-checkbot-token": "bla",
+
+            "x-nft-checkbot-token": "x-nft-checkbot-token",
 
             "content-type": "application/json",
             clienttype: "web",
