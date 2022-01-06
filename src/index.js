@@ -24,15 +24,16 @@ const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
 const imageDataURI = require("image-data-uri");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const uaAnonimizer = require("puppeteer-extra-plugin-anonymize-ua");
+const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
 const UserAgent = require("user-agents");
 const { Solver } = require("2captcha");
 
 const logger = require("./logger");
 const config = require("./config");
+const { waitToTime, randomRange } = require("./utils");
+const { startTimeProgressBar } = require("./test");
 const { api, pages } = require("./constants");
-const { wait, randomRange } = require("./utils");
 
 const isPkg = typeof process.pkg !== "undefined";
 
@@ -57,8 +58,8 @@ const args = [
   '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
 ];
 
+pupExtra.use(AdblockerPlugin({ blockTrackers: true }));
 pupExtra.use(StealthPlugin());
-pupExtra.use(uaAnonimizer());
 
 const options = {
   args,
@@ -67,7 +68,9 @@ const options = {
   executablePath: chromiumExecutablePath,
 };
 
-const userAgent = new UserAgent();
+const userAgent = new UserAgent({ deviceCategory: "desktop" });
+
+const endTme = Date.now() + 1000 * 60 * 2;
 
 pupExtra.launch(options).then(async (browser) => {
   logger.info("Initialization...");
@@ -91,12 +94,49 @@ pupExtra.launch(options).then(async (browser) => {
 
   await page.setUserAgent(userAgent.data.userAgent);
 
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "webdriver", {
+      get: () => false,
+    });
+  });
+
+  await page.evaluateOnNewDocument(() => {
+    window.chrome = {
+      runtime: {},
+    };
+  });
+
+  await page.evaluateOnNewDocument(() => {
+    const originalQuery = window.navigator.permissions.query;
+
+    return (window.navigator.permissions.query = (parameters) =>
+      parameters.name === "notifications"
+        ? Promise.resolve({ state: Notification.permission })
+        : originalQuery(parameters));
+  });
+
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "plugins", {
+      get: () => [1, 2, 3, 4, 5, 6, 7],
+    });
+  });
+
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "languages", {
+      get: () => ["en-US", "en"],
+    });
+  });
+
   await page.setRequestInterception(true);
 
   page.on("request", (req) => {
     if (req.url() === api.CHECK) {
       headers = req.headers();
     }
+
+    // if (req.url() === api.ORDER_CREATE) {
+    //   console.log(new Date(), Date.now() > endTme);
+    // }
 
     if (
       req.resourceType() == "stylesheet" ||
@@ -110,73 +150,14 @@ pupExtra.launch(options).then(async (browser) => {
     req.continue();
   });
 
-  // page.on("response", async (res) => {
-  //   if (res.url() === api.PRODUCT_ONSLACE) {
-  //     const json = await res.json();
-
-  //     if (json.code === "10000222") {
-  //       logger.error(json.message);
-  //       return;
-  //     }
-
-  //     headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
-
-  //     const buyResults = await page.evaluate(
-  //       (url, body, _headers, _captcha) =>
-  //         new Promise(async (resolve) => {
-  //           const responses = [];
-
-  //           const wait = (ms) =>
-  //             new Promise((r) => {
-  //               setTimeout(() => r(), ms);
-  //             });
-
-  //           const count = Array(Number(config.COUNT_REQUESTS)).fill();
-
-  //           for (const c of count) {
-  //             fetch(url, {
-  //               body: JSON.stringify(body),
-  //               method: "POST",
-  //               headers: {
-  //                 "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-  //                 "device-info": _headers["device-info"],
-  //                 "bnc-uuid": _headers["bnc-uuid"],
-  //                 csrftoken: _headers["csrftoken"],
-  //                 "x-nft-checkbot-token": _captcha[0],
-
-  //                 "content-type": "application/json",
-  //                 clienttype: "web",
-  //               },
-  //             }).then(async (res) => {
-  //               responses.push(await res.json());
-  //             });
-
-  //             await wait(10);
-  //           }
-
-  //           setInterval(() => {
-  //             if (responses.length === _captcha.length) {
-  //               resolve(responses);
-  //             }
-  //           }, 1000);
-  //         }),
-  //       api.ORDER_CREATE,
-  //       {
-  //         amount: nftData.amount,
-  //         productId: config.NFT_ID,
-  //         tradeType: 0,
-  //       },
-  //       headers,
-  //       captcha
-  //     );
-
-  //     const status = Array(buyResults).some(({ success }) => success);
-
-  //     console.log(buyResults);
-
-  //     logger.info("You can close the terminal.");
-  //   }
-  // });
+  page.on("response", (res) => {
+    if (res.url() === api.ORDER_CREATE) {
+      res.json().then(({ success }) => {
+        if (success) logger.success(data.message);
+        else logger.warn(data.message);
+      });
+    }
+  });
 
   const cursor = createCursor(page);
 
@@ -225,8 +206,6 @@ pupExtra.launch(options).then(async (browser) => {
 
     parent.insertBefore(a, parent.firstChild);
   }, config.NFT_SALE_ID);
-
-  // await page.screenshot({ path: "bla.png" });
 
   await cursor.click("#link");
 
@@ -317,24 +296,60 @@ pupExtra.launch(options).then(async (browser) => {
 
   // // --------------------------------
 
-  logger.info("Captcha resolving...");
+  startTimeProgressBar(endTme - 3000);
 
-  // captcha = await Promise.all(
-  //   Array(1)
-  //     .fill()
-  //     .map(() =>
-  //       solver
-  //         .recaptcha(config.GOOGLE_KEY, pages.SALE(config.NFT_ID))
-  //         .then(({ data }) => data)
-  //         .catch(() => null)
-  //     )
-  // );
+  await waitToTime(endTme - 3000);
 
   await page.click(".css-mh5cnv");
 
   const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
+  const data = await response.json();
+  if (data.code === "10000222") {
+    logger.error(data.message);
+    return;
+  }
 
-  console.log(await response.json());
+  headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
+
+  await waitToTime(endTme - 1000);
+
+  logger.info("sending requests...");
+
+  await page.evaluate(
+    async (url, body, _headers, countRequests) => {
+      const wait = (ms) =>
+        new Promise((r) => {
+          setTimeout(() => r(), ms);
+        });
+
+      for (const _ of Array(Number(countRequests)).fill()) {
+        fetch(url, {
+          body: JSON.stringify(body),
+          method: "POST",
+          headers: {
+            "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+            "device-info": _headers["device-info"],
+            "bnc-uuid": _headers["bnc-uuid"],
+            csrftoken: _headers["csrftoken"],
+            "x-nft-checkbot-token": "bla",
+
+            "content-type": "application/json",
+            clienttype: "web",
+          },
+        }).then((res) => res.json());
+
+        await wait(10);
+      }
+    },
+    api.ORDER_CREATE,
+    {
+      amount: nftData.amount,
+      productId: config.NFT_ID,
+      tradeType: 0,
+    },
+    headers,
+    config.COUNT_REQUESTS
+  );
 });
 
 const authorization = async (page) => {
@@ -356,11 +371,11 @@ const authorization = async (page) => {
     document.querySelector("canvas").toDataURL()
   );
 
-  // await imageDataURI.outputFile(dataUri, "qr-code.png");
+  await imageDataURI.outputFile(dataUri, "qr-code.png");
 
   await page.waitForResponse(api.AUTH, { timeout: 60000 });
 
-  logger.info("Authorization was successful.");
+  logger.success("Authorization was successful.");
 };
 
 const getProductDetails = async (page) => {
@@ -388,9 +403,10 @@ const getProductDetails = async (page) => {
     title: data.productDetail.title,
     amount: data.productDetail.amount,
     currency: data.productDetail.currency,
+    setStartTime: data.productDetail.setStartTime,
   };
 
-  console.log(formttedData);
+  console.table(formttedData);
 
   return formttedData;
 };
