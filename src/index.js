@@ -8,7 +8,6 @@ const qrcode = require("qrcode-terminal");
 const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
 const imageDataURI = require("image-data-uri");
-const terminalImage = require("terminal-image");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
@@ -69,9 +68,6 @@ const options = {
 const userAgent = new UserAgent({ deviceCategory: "desktop" });
 
 pupExtra.launch(options).then(async (browser) => {
-  console.log(await terminalImage.file("image.png"));
-
-  return;
   const countRequests = await inquirer.prompt({
     type: "number",
     default: config.COUNT_REQUESTS,
