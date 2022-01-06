@@ -16,4 +16,11 @@ const api = {
   CHECK: "https://www.binance.com/bapi/nft/v1/private/nft/compliance/check",
 };
 
-module.exports = { api, pages };
+const modes = {
+  MARKETPLACE: "marketplace",
+  MYSTERY_BOX: "mystery-box",
+};
+modes.valuesToArray = () =>
+  Object.values(modes).filter((value) => typeof value !== "function");
+
+module.exports = { api, pages, modes };

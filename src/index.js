@@ -1,20 +1,23 @@
 const path = require("path");
+const clc = require("cli-color");
 const figlet = require("figlet");
+const fs = require("fs").promises;
+const inquirer = require("inquirer");
 const UserAgent = require("user-agents");
 const qrcode = require("qrcode-terminal");
 const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
 const imageDataURI = require("image-data-uri");
+const terminalImage = require("terminal-image");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
-const clc = require("cli-color");
 
 const logger = require("./logger");
 const config = require("./config");
 const { waitToTime, randomRange } = require("./utils");
 const { startTimeProgressBar } = require("./test");
-const { api } = require("./constants");
+const { api, modes } = require("./constants");
 
 const isPkg = typeof process.pkg !== "undefined";
 
@@ -66,6 +69,70 @@ const options = {
 const userAgent = new UserAgent({ deviceCategory: "desktop" });
 
 pupExtra.launch(options).then(async (browser) => {
+  console.log(await terminalImage.file("image.png"));
+
+  return;
+  const countRequests = await inquirer.prompt({
+    type: "number",
+    default: config.COUNT_REQUESTS,
+    message: "Count requests",
+    name: "countRequests",
+  });
+
+  const delayBetweenRequests = await inquirer.prompt({
+    type: "number",
+    default: config.DELAY_BETWEN_REQUESTS,
+    message: "Delay between requests (ms)",
+    name: "delayBetweenRequests",
+  });
+
+  const mode = await inquirer.prompt({
+    type: "list",
+    choices: modes.valuesToArray(),
+    default: config.MODE,
+    message: "Mode",
+    name: "mode",
+  });
+
+  const { productIds } = await inquirer.prompt({
+    type: "input",
+    message: `Please, enter id (use comma for multiple choice)`,
+    name: "productIds",
+    filter: (values) => {
+      return values.split(",");
+    },
+  });
+
+  const saveToEnv = await inquirer.prompt({
+    message: "Save your settings?",
+    name: "saveToEnv",
+    type: "confirm",
+    default: false,
+  });
+
+  if (saveToEnv) {
+    let content = "";
+
+    const toEnvConst = (str) =>
+      str.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase();
+
+    const addToContent = (obj) => {
+      content += `${toEnvConst(Object.keys(obj)[0])} = ${
+        Object.values(obj)[0]
+      }\n`;
+    };
+
+    addToContent(delayBetweenRequests);
+    addToContent(countRequests);
+    addToContent(mode);
+
+    await fs.writeFile("./.env", content);
+  }
+
+  return;
+
+  // const answers = await inquirer.prompt({});
+
   logger.info("Initialization...");
 
   let headers = {};

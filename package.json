@@ -20,6 +20,7 @@
     "figlet": "^1.5.2",
     "ghost-cursor": "^1.1.8",
     "image-data-uri": "^2.0.1",
+    "inquirer": "^8.2.0",
     "puppeteer": "^13.0.1",
     "puppeteer-afp": "^1.0.1",
     "puppeteer-extra": "^3.2.3",
@@ -28,6 +29,7 @@
     "puppeteer-extra-plugin-recaptcha": "^3.5.0",
     "puppeteer-extra-plugin-stealth": "^2.9.0",
     "qrcode-terminal": "^0.12.0",
+    "terminal-image": "^2.0.0",
     "user-agents": "^1.0.887",
     "winston": "^3.3.3"
   },
