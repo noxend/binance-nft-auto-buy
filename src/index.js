@@ -373,16 +373,9 @@ pupExtra.launch(options).then(async (browser) => {
 
   headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
-  // waitToTime(nftData.startTime).then(() => {
-  //   logger.info("Sending requests...");
-  // });
-
-  console.log(headers);
-
-  return;
-
-
-  await axios.post(api.ORDER_CREATE);
+  waitToTime(nftData.startTime).then(() => {
+    logger.info("Sending requests...");
+  });
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
@@ -395,53 +388,29 @@ pupExtra.launch(options).then(async (browser) => {
         ) => {
           waitToTimeSync(_data.startTime);
 
-          fetch(_url, {
-            body: JSON.stringify({
-              amount: _data.price,
-              productId: _data.productId,
-              tradeType: 0,
-            }),
-            method: "POST",
-            headers: {
-              "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-              "device-info": _headers["device-info"],
-              "bnc-uuid": _headers["bnc-uuid"],
-              csrftoken: _headers["csrftoken"],
+          for (const _ of Array(Number(countRequests)).fill()) {
+            fetch(_url, {
+              body: JSON.stringify({
+                amount: _data.price,
+                productId: _data.productId,
+                tradeType: 0,
+              }),
+              method: "POST",
+              headers: {
+                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+                "device-info": _headers["device-info"],
+                "bnc-uuid": _headers["bnc-uuid"],
+                csrftoken: _headers["csrftoken"],
 
-              "x-nft-checkbot-token": "x-nft-checkbot-token",
+                "x-nft-checkbot-token": "x-nft-checkbot-token",
 
-              "content-type": "application/json",
-              clienttype: "web",
-            },
-          }).then((res) => res.json());
+                "content-type": "application/json",
+                clienttype: "web",
+              },
+            }).then((res) => res.json());
 
-          let count = 0;
-
-          // const interval = setInterval(() => {
-          //   if (count === 10) clearInterval(interval);
-
-          //   count++;
-
-          //   fetch(_url, {
-          //     body: JSON.stringify({
-          //       amount: _data.price,
-          //       productId: _data.productId,
-          //       tradeType: 0,
-          //     }),
-          //     method: "POST",
-          //     headers: {
-          //       "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-          //       "device-info": _headers["device-info"],
-          //       "bnc-uuid": _headers["bnc-uuid"],
-          //       csrftoken: _headers["csrftoken"],
-
-          //       "x-nft-checkbot-token": "x-nft-checkbot-token",
-
-          //       "content-type": "application/json",
-          //       clienttype: "web",
-          //     },
-          //   }).then((res) => res.json());
-          // }, delayBetweenRequests);
+            await wait(delayBetweenRequests);
+          }
         },
         api.ORDER_CREATE,
         nftData,
@@ -459,7 +428,7 @@ pupExtra.launch(options).then(async (browser) => {
           _headers,
           { countRequests, delayBetweenRequests }
         ) => {
-          await waitToTime(_data.startTime - 500);
+          waitToTimeSync(_data.startTime);
 
           for (const _ of Array(Number(countRequests)).fill()) {
             fetch(_url, {
