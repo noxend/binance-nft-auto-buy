@@ -68,68 +68,60 @@ const options = {
 const userAgent = new UserAgent({ deviceCategory: "desktop" });
 
 pupExtra.launch(options).then(async (browser) => {
-  const countRequests = await inquirer.prompt({
-    type: "number",
-    default: config.COUNT_REQUESTS,
-    message: "Count requests",
-    name: "countRequests",
-  });
-
-  const delayBetweenRequests = await inquirer.prompt({
-    type: "number",
-    default: config.DELAY_BETWEN_REQUESTS,
-    message: "Delay between requests (ms)",
-    name: "delayBetweenRequests",
-  });
-
-  const mode = await inquirer.prompt({
-    type: "list",
-    choices: modes.valuesToArray(),
-    default: config.MODE,
-    message: "Mode",
-    name: "mode",
-  });
-
-  const { productIds } = await inquirer.prompt({
-    type: "input",
-    message: `Please, enter id (use comma for multiple choice)`,
-    name: "productIds",
-    filter: (values) => {
-      return values.split(",");
+  const answers = await inquirer.prompt([
+    {
+      type: "number",
+      default: Number(config.COUNT_REQUESTS),
+      message: "Count requests",
+      name: "countRequests",
     },
-  });
+    {
+      type: "number",
+      default: Number(config.DELAY_BETWEN_REQUESTS),
+      message: "Delay between requests (ms)",
+      name: "delayBetweenRequests",
+    },
+    {
+      type: "list",
+      choices: modes.valuesToArray(),
+      default: config.MODE,
+      message: "Mode",
+      name: "mode",
+    },
+    {
+      type: "input",
+      message: `Please, enter id (use comma for multiple choice)`,
+      name: "productIds",
+      filter: (values) => {
+        return values.split(",");
+      },
+    },
+    {
+      message: "Save your settings?",
+      name: "saveToEnv",
+      type: "confirm",
+      default: false,
+    },
+  ]);
 
-  const saveToEnv = await inquirer.prompt({
-    message: "Save your settings?",
-    name: "saveToEnv",
-    type: "confirm",
-    default: false,
-  });
-
-  if (saveToEnv) {
+  if (answers.saveToEnv) {
     let content = "";
+    const skip = ["saveToEnv", "productIds"];
 
     const toEnvConst = (str) =>
       str.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase();
 
-    const addToContent = (obj) => {
-      content += `${toEnvConst(Object.keys(obj)[0])} = ${
-        Object.values(obj)[0]
-      }\n`;
-    };
-
-    addToContent(delayBetweenRequests);
-    addToContent(countRequests);
-    addToContent(mode);
+    for (const key in answers) {
+      if (skip.includes(key)) continue;
+      content += `${toEnvConst(key)} = ${answers[key]}\n`;
+    }
 
     await fs.writeFile("./.env", content);
   }
 
-  return;
+  console.log("\n");
 
-  // const answers = await inquirer.prompt({});
-
-  logger.info("Initialization...");
+  logger.info("Initialiation...");
 
   let headers = {};
   let nftData = {};
@@ -139,8 +131,8 @@ pupExtra.launch(options).then(async (browser) => {
   const page = puppeteerAfp(p);
 
   await page.setViewport({
-    width: userAgent.data.viewportWidth,
-    height: userAgent.data.viewportHeight,
+    width: userAgent.data.viewportWidth + Math.floor(Math.random() * 100),
+    height: userAgent.data.viewportHeight + Math.floor(Math.random() * 100),
     deviceScaleFactor: 1,
     isLandscape: false,
     hasTouch: false,
@@ -222,7 +214,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   await authorization(page);
 
-  nftData = await getProductDetails(page);
+  nftData = await getProductDetails(page, answers.productIds[0]);
 
   logger.info("Bypass captcha...");
 
@@ -262,7 +254,7 @@ pupExtra.launch(options).then(async (browser) => {
     );
 
     parent.insertBefore(a, parent.firstChild);
-  }, config.NFT_SALE_ID);
+  }, config.PRODUCT_ID_TO_SALE);
 
   await cursor.click("#link");
 
@@ -338,7 +330,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Waiting for the sale to start...");
 
-  startTimeProgressBar(nftData.setStartTime - 3000);
+  startTimeProgressBar(nftData.setStartTime - 4000);
 
   await waitToTime(nftData.setStartTime - 3000);
 
@@ -387,7 +379,7 @@ pupExtra.launch(options).then(async (browser) => {
     api.ORDER_CREATE,
     {
       amount: nftData.amount,
-      productId: config.NFT_ID,
+      productId: answers.productIds[0],
       tradeType: 0,
     },
     headers,
@@ -421,14 +413,14 @@ const authorization = async (page) => {
   logger.success("Authorization was successful.");
 };
 
-const getProductDetails = async (page) => {
+const getProductDetails = async (page, productId) => {
   logger.info("Getting NFT data...");
 
   const data = await page.evaluate(
-    async (url, nftid) => {
+    async (url, productId) => {
       const res = await fetch(url, {
         method: "POST",
-        body: JSON.stringify({ productId: nftid }),
+        body: JSON.stringify({ productId }),
         headers: {
           "content-type": "application/json",
         },
@@ -439,7 +431,7 @@ const getProductDetails = async (page) => {
       return data;
     },
     api.PRODUCT_DETAIL,
-    config.NFT_ID
+    productId
   );
 
   const formttedData = {

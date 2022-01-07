@@ -8,8 +8,7 @@ const config = {
   DELAY_BETWEN_REQUESTS: process.env.DELAY_BETWEN_REQUESTS || 10,
   COUNT_REQUESTS: process.env.COUNT_REQUESTS || 1,
   MODE: process.env.MODE || modes.MARKETPLACE,
-  NFT_ID: process.env.NFT_ID,
-  NFT_SALE_ID: 1,
+  PRODUCT_ID_TO_SALE: 1,
 };
 
 module.exports = config;
