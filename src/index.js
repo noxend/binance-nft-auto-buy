@@ -1,4 +1,3 @@
-const path = require("path");
 const clc = require("cli-color");
 const figlet = require("figlet");
 const fs = require("fs").promises;
@@ -90,7 +89,7 @@ pupExtra.launch(options).then(async (browser) => {
     },
     {
       type: "input",
-      message: `Please, enter id (use comma for multiple choice)`,
+      message: `Please, enter product id (use comma for multiple choice)`,
       name: "productIds",
       filter: (values) => {
         return values.split(",");
@@ -204,6 +203,12 @@ pupExtra.launch(options).then(async (browser) => {
         else logger.warn(data.message);
       });
     }
+
+    if (res.url() === api.MYSTERY_BOX_PURCHASE) {
+      res.json().then((body) => {
+        console.log("mystery", body);
+      });
+    }
   });
 
   const cursor = createCursor(page);
@@ -214,7 +219,18 @@ pupExtra.launch(options).then(async (browser) => {
 
   await authorization(page);
 
-  nftData = await getProductDetails(page, answers.productIds[0]);
+  switch (answers.mode) {
+    case modes.MARKETPLACE:
+      nftData = await getProductDetails(page, answers.productIds[0]);
+      break;
+
+    case modes.MYSTERY_BOX:
+      nftData = await getMysteryBoxDetails(page, answers.productIds[0]);
+      break;
+
+    default:
+      break;
+  }
 
   logger.info("Bypass captcha...");
 
@@ -330,6 +346,8 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Waiting for the sale to start...");
 
+  nftData.setStartTime = Date.now() + 10000;
+
   startTimeProgressBar(nftData.setStartTime - 4000);
 
   await waitToTime(nftData.setStartTime - 3000);
@@ -337,6 +355,7 @@ pupExtra.launch(options).then(async (browser) => {
   await page.click(".css-mh5cnv");
 
   const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
+
   const data = await response.json();
   if (data.code === "10000222") {
     logger.error(data.message);
@@ -349,42 +368,89 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Sending requests...");
 
-  await page.evaluate(
-    async (url, body, _headers, countRequests) => {
-      const wait = (ms) =>
-        new Promise((r) => {
-          setTimeout(() => r(), ms);
-        });
+  switch (answers.mode) {
+    case modes.MARKETPLACE:
+      await page.evaluate(
+        async (url, body, _headers, countRequests) => {
+          const wait = (ms) =>
+            new Promise((r) => {
+              setTimeout(() => r(), ms);
+            });
 
-      for (const _ of Array(Number(countRequests)).fill()) {
-        fetch(url, {
-          body: JSON.stringify(body),
-          method: "POST",
-          headers: {
-            "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-            "device-info": _headers["device-info"],
-            "bnc-uuid": _headers["bnc-uuid"],
-            csrftoken: _headers["csrftoken"],
+          for (const _ of Array(Number(countRequests)).fill()) {
+            fetch(url, {
+              body: JSON.stringify(body),
+              method: "POST",
+              headers: {
+                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+                "device-info": _headers["device-info"],
+                "bnc-uuid": _headers["bnc-uuid"],
+                csrftoken: _headers["csrftoken"],
 
-            "x-nft-checkbot-token": "x-nft-checkbot-token",
+                "x-nft-checkbot-token": "x-nft-checkbot-token",
 
-            "content-type": "application/json",
-            clienttype: "web",
-          },
-        }).then((res) => res.json());
+                "content-type": "application/json",
+                clienttype: "web",
+              },
+            }).then((res) => res.json());
 
-        await wait(10);
-      }
-    },
-    api.ORDER_CREATE,
-    {
-      amount: nftData.amount,
-      productId: answers.productIds[0],
-      tradeType: 0,
-    },
-    headers,
-    config.COUNT_REQUESTS
-  );
+            await wait(10);
+          }
+        },
+        api.ORDER_CREATE,
+        {
+          amount: nftData.amount,
+          productId: answers.productIds[0],
+          tradeType: 0,
+        },
+        headers,
+        config.COUNT_REQUESTS
+      );
+
+      break;
+
+    case modes.MYSTERY_BOX:
+      await page.evaluate(
+        async (url, body, _headers, countRequests) => {
+          const wait = (ms) =>
+            new Promise((r) => {
+              setTimeout(() => r(), ms);
+            });
+
+          for (const _ of Array(Number(countRequests)).fill()) {
+            fetch(url, {
+              body: JSON.stringify(body),
+              method: "POST",
+              headers: {
+                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+                "device-info": _headers["device-info"],
+                "bnc-uuid": _headers["bnc-uuid"],
+                csrftoken: _headers["csrftoken"],
+
+                "x-nft-checkbot-token": "x-nft-checkbot-token",
+
+                "content-type": "application/json",
+                clienttype: "web",
+              },
+            }).then((res) => res.json());
+
+            await wait(10);
+          }
+        },
+        api.MYSTERY_BOX_PURCHASE,
+        {
+          productId: nftData.productId,
+          amount: "1",
+        },
+        headers,
+        config.COUNT_REQUESTS
+      );
+
+      break;
+
+    default:
+      break;
+  }
 });
 
 const authorization = async (page) => {
@@ -439,6 +505,32 @@ const getProductDetails = async (page, productId) => {
     amount: data.productDetail.amount,
     currency: data.productDetail.currency,
     setStartTime: data.productDetail.setStartTime,
+  };
+
+  console.table(formttedData);
+
+  return formttedData;
+};
+
+const getMysteryBoxDetails = async (page, productId) => {
+  logger.info("Getting mystery box data...");
+
+  const data = await page.evaluate(async (url) => {
+    const res = await fetch(url, {
+      headers: { "content-type": "application/json" },
+    });
+
+    const { data } = await res.json();
+
+    return data;
+  }, api.MYSTERY_BOX_DETAIL(productId));
+
+  const formttedData = {
+    name: data.name,
+    price: data.price,
+    currency: data.currency,
+    startTime: data.startTime,
+    productId: data.productId,
   };
 
   console.table(formttedData);

@@ -14,6 +14,10 @@ const api = {
   PRODUCT_ONSLACE:
     "https://www.binance.com/bapi/nft/v1/private/nft/nft-trade/product-onsale",
   CHECK: "https://www.binance.com/bapi/nft/v1/private/nft/compliance/check",
+  MYSTERY_BOX_DETAIL: (productId) =>
+    `https://www.binance.com/bapi/nft/v1/friendly/nft/mystery-box/detail?productId=${productId}`,
+  MYSTERY_BOX_PURCHASE:
+    "https://www.binance.com/bapi/nft/v1/private/nft/mystery-box/purchase",
 };
 
 const modes = {
