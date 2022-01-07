@@ -1,19 +1,20 @@
 const clc = require("cli-color");
+const axios = require("axios").default;
+
 const figlet = require("figlet");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
 const UserAgent = require("user-agents");
-const qrcode = require("qrcode-terminal");
 const pupExtra = require("puppeteer-extra");
 const puppeteerAfp = require("puppeteer-afp");
-const imageDataURI = require("image-data-uri");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
 
 const logger = require("./logger");
 const config = require("./config");
-const { waitToTime, randomRange } = require("./utils");
+const { getMysteryBoxDetails, getNFTDetails, authorization } = require("./api");
+const { waitToTime, randomRange, wait, waitToTimeSync } = require("./utils");
 const { startTimeProgressBar } = require("./test");
 const { api, modes } = require("./constants");
 
@@ -91,6 +92,7 @@ pupExtra.launch(options).then(async (browser) => {
       type: "input",
       message: `Please, enter product id (use comma for multiple choice)`,
       name: "productIds",
+      default: "20017738",
       filter: (values) => {
         return values.split(",");
       },
@@ -128,6 +130,10 @@ pupExtra.launch(options).then(async (browser) => {
   const [p] = await browser.pages();
 
   const page = puppeteerAfp(p);
+
+  await page.exposeFunction("wait", wait);
+  await page.exposeFunction("waitToTime", waitToTime);
+  await page.exposeFunction("waitToTimeSync", waitToTimeSync);
 
   await page.setViewport({
     width: userAgent.data.viewportWidth + Math.floor(Math.random() * 100),
@@ -180,9 +186,12 @@ pupExtra.launch(options).then(async (browser) => {
       headers = req.headers();
     }
 
-    // if (req.url() === api.ORDER_CREATE) {
-    //   console.log(new Date(), Date.now() > endTme);
-    // }
+    if (req.url() === api.ORDER_CREATE) {
+      console.log(
+        Date.now() > nftData.startTime,
+        Date.now() - nftData.startTime
+      );
+    }
 
     if (
       req.resourceType() == "stylesheet" ||
@@ -221,7 +230,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
-      nftData = await getProductDetails(page, answers.productIds[0]);
+      nftData = await getNFTDetails(page, answers.productIds[0]);
       break;
 
     case modes.MYSTERY_BOX:
@@ -346,11 +355,11 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Waiting for the sale to start...");
 
-  nftData.setStartTime = Date.now() + 10000;
+  nftData.startTime = Date.now() + 15000;
 
-  startTimeProgressBar(nftData.setStartTime - 4000);
+  startTimeProgressBar(nftData.startTime - 4000);
 
-  await waitToTime(nftData.setStartTime - 3000);
+  await waitToTime(nftData.startTime - 3000);
 
   await page.click(".css-mh5cnv");
 
@@ -364,62 +373,97 @@ pupExtra.launch(options).then(async (browser) => {
 
   headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
 
-  await waitToTime(nftData.setStartTime - 1000);
+  // waitToTime(nftData.startTime).then(() => {
+  //   logger.info("Sending requests...");
+  // });
 
-  logger.info("Sending requests...");
+  console.log(headers);
+
+  return;
+
+
+  await axios.post(api.ORDER_CREATE);
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
       await page.evaluate(
-        async (url, body, _headers, countRequests) => {
-          const wait = (ms) =>
-            new Promise((r) => {
-              setTimeout(() => r(), ms);
-            });
+        async (
+          _url,
+          _data,
+          _headers,
+          { countRequests, delayBetweenRequests }
+        ) => {
+          waitToTimeSync(_data.startTime);
 
-          for (const _ of Array(Number(countRequests)).fill()) {
-            fetch(url, {
-              body: JSON.stringify(body),
-              method: "POST",
-              headers: {
-                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-                "device-info": _headers["device-info"],
-                "bnc-uuid": _headers["bnc-uuid"],
-                csrftoken: _headers["csrftoken"],
+          fetch(_url, {
+            body: JSON.stringify({
+              amount: _data.price,
+              productId: _data.productId,
+              tradeType: 0,
+            }),
+            method: "POST",
+            headers: {
+              "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+              "device-info": _headers["device-info"],
+              "bnc-uuid": _headers["bnc-uuid"],
+              csrftoken: _headers["csrftoken"],
 
-                "x-nft-checkbot-token": "x-nft-checkbot-token",
+              "x-nft-checkbot-token": "x-nft-checkbot-token",
 
-                "content-type": "application/json",
-                clienttype: "web",
-              },
-            }).then((res) => res.json());
+              "content-type": "application/json",
+              clienttype: "web",
+            },
+          }).then((res) => res.json());
 
-            await wait(10);
-          }
+          let count = 0;
+
+          // const interval = setInterval(() => {
+          //   if (count === 10) clearInterval(interval);
+
+          //   count++;
+
+          //   fetch(_url, {
+          //     body: JSON.stringify({
+          //       amount: _data.price,
+          //       productId: _data.productId,
+          //       tradeType: 0,
+          //     }),
+          //     method: "POST",
+          //     headers: {
+          //       "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
+          //       "device-info": _headers["device-info"],
+          //       "bnc-uuid": _headers["bnc-uuid"],
+          //       csrftoken: _headers["csrftoken"],
+
+          //       "x-nft-checkbot-token": "x-nft-checkbot-token",
+
+          //       "content-type": "application/json",
+          //       clienttype: "web",
+          //     },
+          //   }).then((res) => res.json());
+          // }, delayBetweenRequests);
         },
         api.ORDER_CREATE,
-        {
-          amount: nftData.amount,
-          productId: answers.productIds[0],
-          tradeType: 0,
-        },
+        nftData,
         headers,
-        config.COUNT_REQUESTS
+        answers
       );
 
       break;
 
     case modes.MYSTERY_BOX:
       await page.evaluate(
-        async (url, body, _headers, countRequests) => {
-          const wait = (ms) =>
-            new Promise((r) => {
-              setTimeout(() => r(), ms);
-            });
+        async (
+          _url,
+          _data,
+          _headers,
+          { countRequests, delayBetweenRequests }
+        ) => {
+          await waitToTime(_data.startTime - 500);
 
           for (const _ of Array(Number(countRequests)).fill()) {
-            fetch(url, {
-              body: JSON.stringify(body),
+            fetch(_url, {
+              body: JSON.stringify({ amount: 1, productId: _data.productId }),
               method: "POST",
               headers: {
                 "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
@@ -434,16 +478,13 @@ pupExtra.launch(options).then(async (browser) => {
               },
             }).then((res) => res.json());
 
-            await wait(10);
+            await wait(delayBetweenRequests);
           }
         },
         api.MYSTERY_BOX_PURCHASE,
-        {
-          productId: nftData.productId,
-          amount: "1",
-        },
+        nftData,
         headers,
-        config.COUNT_REQUESTS
+        answers
       );
 
       break;
@@ -452,91 +493,6 @@ pupExtra.launch(options).then(async (browser) => {
       break;
   }
 });
-
-const authorization = async (page) => {
-  page.goto("https://accounts.binance.com/en/login");
-
-  const qrResponse = await page.waitForResponse(
-    "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
-  );
-
-  const { data: qrData } = await qrResponse.json();
-
-  qrcode.generate(`https://www.binance.com/en/qr/${qrData}`, { small: true });
-
-  logger.info("Please, scan the QR code to log in.");
-
-  await page.waitForSelector("canvas");
-
-  const dataUri = await page.evaluate(() =>
-    document.querySelector("canvas").toDataURL()
-  );
-
-  await imageDataURI.outputFile(dataUri, "qr-code.png");
-
-  await page.waitForResponse(api.AUTH, { timeout: 60000 });
-
-  logger.success("Authorization was successful.");
-};
-
-const getProductDetails = async (page, productId) => {
-  logger.info("Getting NFT data...");
-
-  const data = await page.evaluate(
-    async (url, productId) => {
-      const res = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({ productId }),
-        headers: {
-          "content-type": "application/json",
-        },
-      });
-
-      const { data } = await res.json();
-
-      return data;
-    },
-    api.PRODUCT_DETAIL,
-    productId
-  );
-
-  const formttedData = {
-    title: data.productDetail.title,
-    amount: data.productDetail.amount,
-    currency: data.productDetail.currency,
-    setStartTime: data.productDetail.setStartTime,
-  };
-
-  console.table(formttedData);
-
-  return formttedData;
-};
-
-const getMysteryBoxDetails = async (page, productId) => {
-  logger.info("Getting mystery box data...");
-
-  const data = await page.evaluate(async (url) => {
-    const res = await fetch(url, {
-      headers: { "content-type": "application/json" },
-    });
-
-    const { data } = await res.json();
-
-    return data;
-  }, api.MYSTERY_BOX_DETAIL(productId));
-
-  const formttedData = {
-    name: data.name,
-    price: data.price,
-    currency: data.currency,
-    startTime: data.startTime,
-    productId: data.productId,
-  };
-
-  console.table(formttedData);
-
-  return formttedData;
-};
 
 process.on("uncaughtException", (err) => {
   logger.error(err.message);
