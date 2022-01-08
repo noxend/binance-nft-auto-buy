@@ -1,14 +1,10 @@
 const clc = require("cli-color");
-const axios = require("axios").default;
-
 const figlet = require("figlet");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
 const UserAgent = require("user-agents");
 const pupExtra = require("puppeteer-extra");
-const puppeteerAfp = require("puppeteer-afp");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { createCursor } = require("ghost-cursor");
 
 const logger = require("./logger");
@@ -55,7 +51,6 @@ const args = [
   '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
 ];
 
-pupExtra.use(AdblockerPlugin({ blockTrackers: true }));
 pupExtra.use(StealthPlugin());
 
 const options = {
@@ -66,6 +61,15 @@ const options = {
 };
 
 const userAgent = new UserAgent({ deviceCategory: "desktop" });
+
+const viewportSettings = {
+  width: userAgent.data.viewportWidth + Math.floor(Math.random() * 100),
+  height: userAgent.data.viewportHeight + Math.floor(Math.random() * 100),
+  deviceScaleFactor: 1,
+  isLandscape: false,
+  hasTouch: false,
+  isMobile: false,
+};
 
 pupExtra.launch(options).then(async (browser) => {
   const answers = await inquirer.prompt([
@@ -124,25 +128,19 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Initialiation...");
 
-  let headers = {};
   let nftData = {};
 
-  const [p] = await browser.pages();
+  const page = await browser.newPage();
 
-  const page = puppeteerAfp(p);
+  // const page = puppeteerAfp(p);
 
-  await page.exposeFunction("wait", wait);
-  await page.exposeFunction("waitToTime", waitToTime);
-  await page.exposeFunction("waitToTimeSync", waitToTimeSync);
+  await Promise.all([
+    page.exposeFunction("wait", wait),
+    page.exposeFunction("waitToTime", waitToTime),
+    page.exposeFunction("waitToTimeSync", waitToTimeSync),
+  ]);
 
-  await page.setViewport({
-    width: userAgent.data.viewportWidth + Math.floor(Math.random() * 100),
-    height: userAgent.data.viewportHeight + Math.floor(Math.random() * 100),
-    deviceScaleFactor: 1,
-    isLandscape: false,
-    hasTouch: false,
-    isMobile: false,
-  });
+  await page.setViewport(viewportSettings);
 
   await page.setUserAgent(userAgent.data.userAgent);
 
@@ -182,10 +180,6 @@ pupExtra.launch(options).then(async (browser) => {
   await page.setRequestInterception(true);
 
   page.on("request", (req) => {
-    if (req.url() === api.CHECK) {
-      headers = req.headers();
-    }
-
     if (req.url() === api.ORDER_CREATE) {
       console.log(
         Date.now() > nftData.startTime,
@@ -207,9 +201,9 @@ pupExtra.launch(options).then(async (browser) => {
 
   page.on("response", (res) => {
     if (res.url() === api.ORDER_CREATE) {
-      res.json().then(({ success }) => {
+      res.json().then(({ success, message }) => {
         if (success) logger.success("🥳");
-        else logger.warn(data.message);
+        else logger.warn(message);
       });
     }
 
@@ -230,11 +224,14 @@ pupExtra.launch(options).then(async (browser) => {
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
-      nftData = await getNFTDetails(page, answers.productIds[0]);
+      [nftData] = await Promise.all(
+        answers.productIds.map((productId) => getNFTDetails(productId))
+      );
+
       break;
 
     case modes.MYSTERY_BOX:
-      nftData = await getMysteryBoxDetails(page, answers.productIds[0]);
+      nftData = await getMysteryBoxDetails(answers.productIds[0]);
       break;
 
     default:
@@ -357,60 +354,45 @@ pupExtra.launch(options).then(async (browser) => {
 
   nftData.startTime = Date.now() + 15000;
 
-  startTimeProgressBar(nftData.startTime - 4000);
+  startTimeProgressBar(nftData.startTime - 3000);
 
-  await waitToTime(nftData.startTime - 3000);
+  await waitToTime(nftData.startTime - 5000);
 
   await page.click(".css-mh5cnv");
 
   const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
 
   const data = await response.json();
+
   if (data.code === "10000222") {
     logger.error(data.message);
     return;
   }
 
+  const headers = response.request().headers();
+
   headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
+  headers["x-nft-checkbot-token"] = "x-nft-checkbot-token";
 
   waitToTime(nftData.startTime).then(() => {
     logger.info("Sending requests...");
   });
 
+  waitToTimeSync(nftData.startTime);
+
   switch (answers.mode) {
     case modes.MARKETPLACE:
       await page.evaluate(
-        async (
-          _url,
-          _data,
-          _headers,
-          { countRequests, delayBetweenRequests }
-        ) => {
-          waitToTimeSync(_data.startTime);
-
-          for (const _ of Array(Number(countRequests)).fill()) {
-            fetch(_url, {
-              body: JSON.stringify({
-                amount: _data.price,
-                productId: _data.productId,
-                tradeType: 0,
-              }),
-              method: "POST",
-              headers: {
-                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-                "device-info": _headers["device-info"],
-                "bnc-uuid": _headers["bnc-uuid"],
-                csrftoken: _headers["csrftoken"],
-
-                "x-nft-checkbot-token": "x-nft-checkbot-token",
-
-                "content-type": "application/json",
-                clienttype: "web",
-              },
-            }).then((res) => res.json());
-
-            await wait(delayBetweenRequests);
-          }
+        (_url, _data, _headers) => {
+          fetch(_url, {
+            body: JSON.stringify({
+              amount: _data.price,
+              productId: _data.productId,
+              tradeType: 0,
+            }),
+            method: "POST",
+            headers: _headers,
+          }).then((res) => res.json());
         },
         api.ORDER_CREATE,
         nftData,
