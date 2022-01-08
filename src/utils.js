@@ -93,9 +93,8 @@ const createPage = async (browser) => {
   await page.setRequestInterception(true);
 
   page.on("request", (req) => {
-    console.log(await req.text());
-    if (req.url() === api.ORDER_CREATE) {
-    }
+    // if (req.url() === api.ORDER_CREATE) {
+    // }
 
     if (
       req.resourceType() == "stylesheet" ||

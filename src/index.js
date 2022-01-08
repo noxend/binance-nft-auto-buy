@@ -242,15 +242,25 @@ pupExtra.launch(options).then(async (browser) => {
 
   await cursor.move(".css-mh5cnv");
 
+  await page.click(".css-mh5cnv");
+
+  const response1 = await page.waitForResponse(api.PRODUCT_ONSLACE);
+
+  const data1 = await response1.json();
+
+  if (data1.code === "10000222") {
+    logger.error("Please, restart bot and try again.");
+  } else {
+    logger.success("OK");
+  }
+
   // // --------------------------------
 
   logger.info("Waiting for the sale to start...");
 
-  nftData.startTime = Date.now() + 15000;
-
   startTimeProgressBar(nftData.startTime - 3000);
 
-  await waitToTime(nftData.startTime - 5000);
+  await waitToTime(nftData.startTime - 3000);
 
   await page.click(".css-mh5cnv");
 
@@ -296,33 +306,12 @@ pupExtra.launch(options).then(async (browser) => {
 
     case modes.MYSTERY_BOX:
       await page.evaluate(
-        async (
-          _url,
-          _data,
-          _headers,
-          { countRequests, delayBetweenRequests }
-        ) => {
-          waitToTimeSync(_data.startTime);
-
-          for (const _ of Array(Number(countRequests)).fill()) {
-            fetch(_url, {
-              body: JSON.stringify({ amount: 1, productId: _data.productId }),
-              method: "POST",
-              headers: {
-                "x-nft-checkbot-sitekey": _headers["x-nft-checkbot-sitekey"],
-                "device-info": _headers["device-info"],
-                "bnc-uuid": _headers["bnc-uuid"],
-                csrftoken: _headers["csrftoken"],
-
-                "x-nft-checkbot-token": "x-nft-checkbot-token",
-
-                "content-type": "application/json",
-                clienttype: "web",
-              },
-            }).then((res) => res.json());
-
-            await wait(delayBetweenRequests);
-          }
+        async (_url, _data, _headers) => {
+          fetch(_url, {
+            body: JSON.stringify({ amount: 1, productId: _data.productId }),
+            method: "POST",
+            headers: _headers,
+          }).then((res) => res.json());
         },
         api.MYSTERY_BOX_PURCHASE,
         nftData,
