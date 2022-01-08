@@ -2,7 +2,6 @@ const clc = require("cli-color");
 const figlet = require("figlet");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
-const UserAgent = require("user-agents");
 const pupExtra = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const { createCursor } = require("ghost-cursor");
@@ -10,9 +9,15 @@ const { createCursor } = require("ghost-cursor");
 const logger = require("./logger");
 const config = require("./config");
 const { getMysteryBoxDetails, getNFTDetails, authorization } = require("./api");
-const { waitToTime, randomRange, wait, waitToTimeSync } = require("./utils");
 const { startTimeProgressBar } = require("./test");
 const { api, modes } = require("./constants");
+const {
+  waitToTimeSync,
+  waitToTime,
+  randomRange,
+  createPage,
+  wait,
+} = require("./utils");
 
 const isPkg = typeof process.pkg !== "undefined";
 
@@ -60,31 +65,8 @@ const options = {
   executablePath: chromiumExecutablePath,
 };
 
-const userAgent = new UserAgent({ deviceCategory: "desktop" });
-
-const viewportSettings = {
-  width: userAgent.data.viewportWidth + Math.floor(Math.random() * 100),
-  height: userAgent.data.viewportHeight + Math.floor(Math.random() * 100),
-  deviceScaleFactor: 1,
-  isLandscape: false,
-  hasTouch: false,
-  isMobile: false,
-};
-
 pupExtra.launch(options).then(async (browser) => {
   const answers = await inquirer.prompt([
-    {
-      type: "number",
-      default: Number(config.COUNT_REQUESTS),
-      message: "Count requests",
-      name: "countRequests",
-    },
-    {
-      type: "number",
-      default: Number(config.DELAY_BETWEN_REQUESTS),
-      message: "Delay between requests (ms)",
-      name: "delayBetweenRequests",
-    },
     {
       type: "list",
       choices: modes.valuesToArray(),
@@ -94,12 +76,9 @@ pupExtra.launch(options).then(async (browser) => {
     },
     {
       type: "input",
-      message: `Please, enter product id (use comma for multiple choice)`,
-      name: "productIds",
+      message: `Please, enter product id`,
+      name: "productId",
       default: "20017738",
-      filter: (values) => {
-        return values.split(",");
-      },
     },
     {
       message: "Save your settings?",
@@ -111,7 +90,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   if (answers.saveToEnv) {
     let content = "";
-    const skip = ["saveToEnv", "productIds"];
+    const skip = ["saveToEnv", "productId"];
 
     const toEnvConst = (str) =>
       str.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase();
@@ -130,89 +109,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   let nftData = {};
 
-  const page = await browser.newPage();
-
-  // const page = puppeteerAfp(p);
-
-  await Promise.all([
-    page.exposeFunction("wait", wait),
-    page.exposeFunction("waitToTime", waitToTime),
-    page.exposeFunction("waitToTimeSync", waitToTimeSync),
-  ]);
-
-  await page.setViewport(viewportSettings);
-
-  await page.setUserAgent(userAgent.data.userAgent);
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "webdriver", {
-      get: () => false,
-    });
-  });
-
-  await page.evaluateOnNewDocument(() => {
-    window.chrome = {
-      runtime: {},
-    };
-  });
-
-  await page.evaluateOnNewDocument(() => {
-    const originalQuery = window.navigator.permissions.query;
-
-    return (window.navigator.permissions.query = (parameters) =>
-      parameters.name === "notifications"
-        ? Promise.resolve({ state: Notification.permission })
-        : originalQuery(parameters));
-  });
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "plugins", {
-      get: () => [1, 2, 3, 4, 5, 6, 7],
-    });
-  });
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "languages", {
-      get: () => ["en-US", "en"],
-    });
-  });
-
-  await page.setRequestInterception(true);
-
-  page.on("request", (req) => {
-    if (req.url() === api.ORDER_CREATE) {
-      console.log(
-        Date.now() > nftData.startTime,
-        Date.now() - nftData.startTime
-      );
-    }
-
-    if (
-      req.resourceType() == "stylesheet" ||
-      req.resourceType() == "font" ||
-      req.resourceType() == "image"
-    ) {
-      req.abort();
-      return;
-    }
-
-    req.continue();
-  });
-
-  page.on("response", (res) => {
-    if (res.url() === api.ORDER_CREATE) {
-      res.json().then(({ success, message }) => {
-        if (success) logger.success("🥳");
-        else logger.warn(message);
-      });
-    }
-
-    if (res.url() === api.MYSTERY_BOX_PURCHASE) {
-      res.json().then((body) => {
-        console.log("mystery", body);
-      });
-    }
-  });
+  const page = await createPage(browser);
 
   const cursor = createCursor(page);
 
@@ -224,14 +121,11 @@ pupExtra.launch(options).then(async (browser) => {
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
-      [nftData] = await Promise.all(
-        answers.productIds.map((productId) => getNFTDetails(productId))
-      );
-
+      nftData = await getNFTDetails(answers.productId);
       break;
 
     case modes.MYSTERY_BOX:
-      nftData = await getMysteryBoxDetails(answers.productIds[0]);
+      nftData = await getMysteryBoxDetails(answers.productId);
       break;
 
     default:
@@ -374,11 +268,8 @@ pupExtra.launch(options).then(async (browser) => {
   headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
   headers["x-nft-checkbot-token"] = "x-nft-checkbot-token";
 
-  waitToTime(nftData.startTime).then(() => {
-    logger.info("Sending requests...");
-  });
-
   waitToTimeSync(nftData.startTime);
+  logger.info("Sending requests...");
 
   switch (answers.mode) {
     case modes.MARKETPLACE:
@@ -388,6 +279,7 @@ pupExtra.launch(options).then(async (browser) => {
             body: JSON.stringify({
               amount: _data.price,
               productId: _data.productId,
+              startTime: _data.startTime,
               tradeType: 0,
             }),
             method: "POST",
