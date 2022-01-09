@@ -18,11 +18,14 @@ const api = {
     `https://www.binance.com/bapi/nft/v1/friendly/nft/mystery-box/detail?productId=${productId}`,
   MYSTERY_BOX_PURCHASE:
     "https://www.binance.com/bapi/nft/v1/private/nft/mystery-box/purchase",
+  SIMPLE_INFO:
+    "https://www.binance.com/bapi/nft/v1/private/nft/user-info/simple-info",
 };
 
 const modes = {
   MARKETPLACE: "marketplace",
   MYSTERY_BOX: "mystery-box",
+  AUCTION: "auction",
 };
 modes.valuesToArray = () =>
   Object.values(modes).filter((value) => typeof value !== "function");

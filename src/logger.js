@@ -21,7 +21,7 @@ const logger = winston.createLogger({
           level: true,
         }),
         format.timestamp({
-          format: "HH:MM:SS:ms",
+          format: "HH:mm:ss:ms",
         }),
         format.printf(
           (info) =>

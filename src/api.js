@@ -48,9 +48,9 @@ const authorization = async (page) => {
     "https://accounts.binance.com/bapi/accounts/v1/public/qrcode/login/get"
   );
 
-  const { data } = await qrResponse.json();
+  const { data: qr } = await qrResponse.json();
 
-  qrcode.generate(`https://www.binance.com/en/qr/${data}`, { small: true });
+  qrcode.generate(`https://www.binance.com/en/qr/${qr}`, { small: true });
 
   logger.info("Please, scan the QR code to log in.");
 
@@ -62,9 +62,22 @@ const authorization = async (page) => {
 
   await imageDataURI.outputFile(dataUri, "qr-code.png");
 
-  await page.waitForResponse(api.AUTH, { timeout: 120000 });
+  const response = await page.waitForResponse(api.AUTH, {
+    timeout: 120000,
+  });
 
-  logger.success("Authorization was successful.");
+  const { data } = await page.evaluate(
+    async (url, headers) => {
+      const response = await fetch(url, { headers });
+      return response.json();
+    },
+    api.SIMPLE_INFO,
+    response.request().headers()
+  );
+
+  logger.success(`You have been authorized as ${data.nickName}.`);
+
+  return data;
 };
 
 module.exports = { getMysteryBoxDetails, getNFTDetails, authorization };

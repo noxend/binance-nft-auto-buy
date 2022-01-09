@@ -81,6 +81,12 @@ pupExtra.launch(options).then(async (browser) => {
       default: "20017738",
     },
     {
+      message: "Your bid",
+      name: "bid",
+      type: "input",
+      when: ({ mode }) => mode === modes.AUCTION,
+    },
+    {
       message: "Save your settings?",
       name: "saveToEnv",
       type: "confirm",
@@ -117,9 +123,10 @@ pupExtra.launch(options).then(async (browser) => {
 
   // ------------------------
 
-  await authorization(page);
+  const user = await authorization(page);
 
   switch (answers.mode) {
+    case modes.AUCTION:
     case modes.MARKETPLACE:
       nftData = await getNFTDetails(answers.productId);
       break;
@@ -295,6 +302,17 @@ pupExtra.launch(options).then(async (browser) => {
             method: "POST",
             headers: _headers,
           }).then((res) => res.json());
+
+          fetch(_url, {
+            body: JSON.stringify({
+              amount: _data.price,
+              productId: _data.productId,
+              startTime: _data.startTime,
+              tradeType: 0,
+            }),
+            method: "POST",
+            headers: _headers,
+          }).then((res) => res.json());
         },
         api.ORDER_CREATE,
         nftData,
@@ -317,6 +335,27 @@ pupExtra.launch(options).then(async (browser) => {
         nftData,
         headers,
         answers
+      );
+
+      break;
+
+    case modes.AUCTION:
+      await page.evaluate(
+        async (_url, _body, _headers) => {
+          fetch(_url, {
+            body: JSON.stringify(_body),
+            method: "POST",
+            headers: _headers,
+          }).then((res) => res.json());
+        },
+        api.ORDER_CREATE,
+        {
+          productId: nftData.productId,
+          amount: answers.bid,
+          userId: user.userId,
+          tradeType: 1,
+        },
+        headers
       );
 
       break;
