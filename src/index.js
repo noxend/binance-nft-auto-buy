@@ -1,4 +1,5 @@
 const clc = require("cli-color");
+const paht = require("path");
 const figlet = require("figlet");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
@@ -292,17 +293,6 @@ pupExtra.launch(options).then(async (browser) => {
     case modes.MARKETPLACE:
       await page.evaluate(
         (_url, _data, _headers) => {
-          fetch(_url, {
-            body: JSON.stringify({
-              amount: _data.price,
-              productId: _data.productId,
-              startTime: _data.startTime,
-              tradeType: 0,
-            }),
-            method: "POST",
-            headers: _headers,
-          }).then((res) => res.json());
-
           fetch(_url, {
             body: JSON.stringify({
               amount: _data.price,
