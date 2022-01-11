@@ -34,6 +34,7 @@ const getNFTDetails = async (productId) => {
     price: data.productDetail.amount,
     currency: data.productDetail.currency,
     startTime: data.productDetail.setStartTime,
+    endTime: data.productDetail.setEndTime,
   };
 
   console.table(formttedData);

@@ -84,8 +84,15 @@ pupExtra.launch(options).then(async (browser) => {
     {
       message: "Your bid",
       name: "bid",
-      type: "input",
+      type: "number",
       when: ({ mode }) => mode === modes.AUCTION,
+    },
+    {
+      message: "Amount",
+      name: "amount",
+      type: "number",
+      default: 1,
+      when: ({ mode }) => mode === modes.MYSTERY_BOX,
     },
     {
       message: "Save your settings?",
@@ -266,87 +273,41 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Waiting for the sale to start...");
 
-  startTimeProgressBar(nftData.startTime - 3000);
-
-  await waitToTime(nftData.startTime - 3000);
-
-  await page.click(".css-mh5cnv");
-
-  const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
-
-  const data = await response.json();
-
-  if (data.code === "10000222") {
-    logger.error(data.message);
-    return;
-  }
-
-  const headers = response.request().headers();
-
-  headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
-  headers["x-nft-checkbot-token"] = "x-nft-checkbot-token";
-
-  waitToTimeSync(nftData.startTime);
-  logger.info("Sending requests...");
-
   switch (answers.mode) {
     case modes.MARKETPLACE:
-      await page.evaluate(
-        (_url, _data, _headers) => {
-          fetch(_url, {
-            body: JSON.stringify({
-              amount: _data.price,
-              productId: _data.productId,
-              startTime: _data.startTime,
-              tradeType: 0,
-            }),
-            method: "POST",
-            headers: _headers,
-          }).then((res) => res.json());
+      await makePurchase(page, {
+        url: api.ORDER_CREATE,
+        triggerTime: nftData.startTime,
+        body: {
+          amount: nftData.price,
+          productId: nftData.productId,
+          tradeType: 0,
         },
-        api.ORDER_CREATE,
-        nftData,
-        headers,
-        answers
-      );
+      });
 
       break;
 
     case modes.MYSTERY_BOX:
-      await page.evaluate(
-        async (_url, _data, _headers) => {
-          fetch(_url, {
-            body: JSON.stringify({ amount: 1, productId: _data.productId }),
-            method: "POST",
-            headers: _headers,
-          }).then((res) => res.json());
-        },
-        api.MYSTERY_BOX_PURCHASE,
-        nftData,
-        headers,
-        answers
-      );
+      await makePurchase(page, {
+        url: api.MYSTERY_BOX_PURCHASE,
+        triggerTime: nftData.startTime,
+        body: { amount: answers.amount, productId: nftData.productId },
+      });
 
       break;
 
     case modes.AUCTION:
-      await page.evaluate(
-        async (_url, _body, _headers) => {
-          fetch(_url, {
-            body: JSON.stringify(_body),
-            method: "POST",
-            headers: _headers,
-          }).then((res) => res.json());
-        },
-        api.ORDER_CREATE,
-        {
+      await makePurchase(page, {
+        url: api.ORDER_CREATE,
+        triggerTime: nftData.endTime,
+        timeOffset: -500,
+        body: {
           productId: nftData.productId,
           amount: answers.bid,
           userId: user.userId,
           tradeType: 1,
         },
-        headers
-      );
+      });
 
       break;
 
@@ -354,6 +315,36 @@ pupExtra.launch(options).then(async (browser) => {
       break;
   }
 });
+
+const makePurchase = async (
+  page,
+  { url, triggerTime, body, timeOffset = 0 }
+) => {
+  startTimeProgressBar(triggerTime - 3000);
+
+  await waitToTime(triggerTime - 3000);
+
+  await page.click(".css-mh5cnv");
+
+  const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
+  const headers = response.request().headers();
+
+  headers["x-nft-checkbot-sitekey"] = config.GOOGLE_KEY;
+  headers["x-nft-checkbot-token"] = "x-nft-checkbot-token";
+
+  waitToTimeSync(triggerTime + timeOffset);
+
+  return page.evaluate(
+    ({ url, body, headers }) => {
+      fetch(url, {
+        body: JSON.stringify(body),
+        method: "POST",
+        headers,
+      }).then((res) => res.json());
+    },
+    { url, body, headers }
+  );
+};
 
 process.on("uncaughtException", (err) => {
   logger.error(err.message);
