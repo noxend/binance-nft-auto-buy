@@ -17,7 +17,6 @@ const {
   waitToTime,
   randomRange,
   createPage,
-  wait,
 } = require("./utils");
 
 const isPkg = typeof process.pkg !== "undefined";
@@ -76,10 +75,10 @@ pupExtra.launch(options).then(async (browser) => {
       name: "mode",
     },
     {
-      type: "input",
-      message: `Please, enter product id`,
+      type: "number",
+      message: "Please, enter product id",
       name: "productId",
-      default: "20017738",
+      default: config.PRODUCT_ID,
     },
     {
       message: "Your bid",
@@ -104,7 +103,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   if (answers.saveToEnv) {
     let content = "";
-    const skip = ["saveToEnv", "productId"];
+    const skip = ["saveToEnv"];
 
     const toEnvConst = (str) =>
       str.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase();
