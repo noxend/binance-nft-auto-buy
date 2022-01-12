@@ -1,5 +1,5 @@
 const clc = require("cli-color");
-const paht = require("path");
+const path = require("path");
 const figlet = require("figlet");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
@@ -264,6 +264,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   if (data1.code === "10000222") {
     logger.error("Please, restart bot and try again.");
+    return;
   } else {
     logger.success("OK");
   }
@@ -290,7 +291,7 @@ pupExtra.launch(options).then(async (browser) => {
       await makePurchase(page, {
         url: api.MYSTERY_BOX_PURCHASE,
         triggerTime: nftData.startTime,
-        body: { amount: answers.amount, productId: nftData.productId },
+        body: { number: answers.amount, productId: nftData.productId },
       });
 
       break;
