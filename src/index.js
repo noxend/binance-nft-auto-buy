@@ -299,7 +299,7 @@ pupExtra.launch(options).then(async (browser) => {
       await makePurchase(page, {
         url: api.ORDER_CREATE,
         triggerTime: nftData.endTime,
-        timeOffset: -500,
+        timeOffset: -2000,
         body: {
           productId: nftData.productId,
           amount: answers.bid,
@@ -319,9 +319,9 @@ const makePurchase = async (
   page,
   { url, triggerTime, body, timeOffset = 0 }
 ) => {
-  startTimeProgressBar(triggerTime - 3000);
+  startTimeProgressBar(triggerTime + timeOffset + -3000);
 
-  await waitToTime(triggerTime - 3000);
+  await waitToTime(triggerTime + timeOffset + -3000);
 
   await page.click(".css-mh5cnv");
 
