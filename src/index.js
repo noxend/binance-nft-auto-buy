@@ -75,7 +75,7 @@ pupExtra.launch(options).then(async (browser) => {
       name: "mode",
     },
     {
-      type: "number",
+      type: "input",
       message: "Please, enter product id",
       name: "productId",
       default: config.PRODUCT_ID,
