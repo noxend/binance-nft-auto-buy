@@ -111,14 +111,14 @@ const createPage = async (browser) => {
   page.on("response", (res) => {
     if (res.url() === api.ORDER_CREATE) {
       res.json().then(({ success, message }) => {
-        if (success) logger.success("🥳");
+        if (success) logger.info("🥳");
         else logger.warn(message);
       });
     }
 
     if (res.url() === api.MYSTERY_BOX_PURCHASE) {
       res.json().then((body) => {
-        console.log("mystery", body);
+        console.log(body);
       });
     }
   });

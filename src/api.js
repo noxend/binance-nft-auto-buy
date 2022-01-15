@@ -76,7 +76,7 @@ const authorization = async (page) => {
     response.request().headers()
   );
 
-  logger.success(`You have been authorized as ${data.nickName}.`);
+  logger.info(`You have been authorized as ${data.nickName}.`);
 
   return data;
 };

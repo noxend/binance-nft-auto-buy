@@ -116,6 +116,8 @@ pupExtra.launch(options).then(async (browser) => {
     await fs.writeFile("./.env", content);
   }
 
+  console.log("\n");
+
   logger.info("Initialiation...");
 
   let nftData = {};
@@ -124,7 +126,7 @@ pupExtra.launch(options).then(async (browser) => {
 
   const cursor = createCursor(page);
 
-  logger.success("Initialization completed.");
+  logger.info("Initialization completed.");
 
   // ------------------------
 
@@ -264,7 +266,7 @@ pupExtra.launch(options).then(async (browser) => {
     logger.error("Please, restart bot and try again.");
     return;
   } else {
-    logger.success("OK");
+    logger.info("OK");
   }
 
   // // --------------------------------
