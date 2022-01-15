@@ -4,9 +4,9 @@ const clc = require("cli-color");
 const startTimeProgressBar = (startTime, intervalUpdate = 1000) => {
   const bar = new cliProgress.SingleBar(
     {
-      format: clc.green("{bar} {percentage}% ETA: {eta_formatted}"),
+      format: clc.cyan("[{bar}] {percentage}% ETA: {eta_formatted}"),
     },
-    cliProgress.Presets.shades_classic
+    cliProgress.Presets.rect
   );
 
   const diff = startTime - Date.now();

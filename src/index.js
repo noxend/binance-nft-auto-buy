@@ -39,11 +39,11 @@ console.log(
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
-      .executablePath()
-      .replace(
-        /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
-        path.join(path.dirname(process.execPath), "chromium")
-      )
+    .executablePath()
+    .replace(
+      /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+      path.join(path.dirname(process.execPath), "chromium")
+    )
   : pupExtra.executablePath();
 
 const args = [
@@ -148,52 +148,14 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Bypass captcha...");
 
-  await page.waitForSelector("#header_menu_ba-NFT");
-
-  await cursor.click("#header_menu_ba-NFT");
-
-  await page.waitForTimeout(3000);
+  await page.goto(`https://www.binance.com/en/nft/goods/sale/${config.PRODUCT_ID_TO_SALE}`)
 
   await page.waitForSelector(
     "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
   );
+
   await cursor.click(
     "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
-  );
-
-  await cursor.click('a[href="/en/nft/marketplace"]');
-
-  await page.waitForSelector(".css-1ql2hru");
-
-  await cursor.move(".css-1ql2hru", {
-    moveDelay: randomRange(50, 100),
-  });
-
-  await page.evaluate((id) => {
-    const a = document.createElement("a");
-
-    a.setAttribute("href", `/en/nft/goods/sale/${id}`);
-    a.setAttribute("data-bn-type", "text");
-    a.setAttribute("class", "css-7x232n");
-    a.setAttribute("id", "link");
-
-    a.textContent = "!!!";
-
-    const parent = document.querySelector(
-      "#__APP > div > div:nth-child(1) > header > div.css-11y6cix > div > div.css-1xvga6"
-    );
-
-    parent.insertBefore(a, parent.firstChild);
-  }, config.PRODUCT_ID_TO_SALE);
-
-  await cursor.click("#link");
-
-  await page.waitForResponse(
-    "https://www.binance.com/bapi/nft/v2/public/nft/nft-trade/onsale-config"
-  );
-
-  await page.waitForSelector(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o"
   );
 
   await cursor.click(
