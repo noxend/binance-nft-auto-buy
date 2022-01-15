@@ -34,7 +34,7 @@ const logger = winston.createLogger({
 
 winston.addColors({
   success: "green",
-  info: "cyan",
+  // info: "cyan",
 });
 
 module.exports = logger;

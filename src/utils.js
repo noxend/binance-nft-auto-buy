@@ -117,8 +117,9 @@ const createPage = async (browser) => {
     }
 
     if (res.url() === api.MYSTERY_BOX_PURCHASE) {
-      res.json().then((body) => {
-        console.log(body);
+      res.json().then(({ success, message }) => {
+        if (success) logger.info("🥳");
+        else logger.warn(message);
       });
     }
   });
