@@ -9,8 +9,8 @@ const { createCursor } = require("ghost-cursor");
 
 const logger = require("./logger");
 const config = require("./config");
+const startTimeProgressBar = require("./progress-bar");
 const { getMysteryBoxDetails, getNFTDetails, authorization } = require("./api");
-const { startTimeProgressBar } = require("./test");
 const { api, modes } = require("./constants");
 const {
   waitToTimeSync,
@@ -115,8 +115,6 @@ pupExtra.launch(options).then(async (browser) => {
 
     await fs.writeFile("./.env", content);
   }
-
-  console.log("\n");
 
   logger.info("Initialiation...");
 

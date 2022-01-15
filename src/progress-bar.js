@@ -26,4 +26,4 @@ const startTimeProgressBar = (startTime, intervalUpdate = 1000) => {
   }, intervalUpdate);
 };
 
-module.exports = { startTimeProgressBar };
+module.exports = startTimeProgressBar;
