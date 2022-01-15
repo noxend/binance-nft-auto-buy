@@ -11,6 +11,7 @@
   "author": "NXND",
   "license": "ISC",
   "dependencies": {
+    "@ptkdev/logger": "^1.8.0",
     "2captcha": "^2.1.10",
     "axios": "^0.24.0",
     "chalk": "^5.0.0",
@@ -19,7 +20,7 @@
     "dotenv": "^10.0.0",
     "figlet": "^1.5.2",
     "ghost-cursor": "^1.1.8",
-    "image-data-uri": "^2.0.1",
+    "image-data-uri": "^1.0.0",
     "inquirer": "^8.2.0",
     "puppeteer": "^13.0.1",
     "puppeteer-afp": "^1.0.1",
