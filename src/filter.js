@@ -54,13 +54,13 @@ const main = async () => {
       .then(({ data: { data } }) => {
         const filtered = data.rows
           .map((data) => {
-            if (!data.favorites) {
-              console.log(data);
+            if (data.favorites === 1) {
+              console.log(
+                `https://www.binance.com/uk-UA/nft/goods/detail?productId=${data.productId}&isProduct=1`
+              );
             }
           })
           .filter((row) => row);
-
-        console.log(filtered);
       });
   }
 };

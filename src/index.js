@@ -39,11 +39,11 @@ console.log(
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
-    .executablePath()
-    .replace(
-      /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
-      path.join(path.dirname(process.execPath), "chromium")
-    )
+      .executablePath()
+      .replace(
+        /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+        path.join(path.dirname(process.execPath), "chromium")
+      )
   : pupExtra.executablePath();
 
 const args = [
@@ -148,7 +148,9 @@ pupExtra.launch(options).then(async (browser) => {
 
   logger.info("Bypass captcha...");
 
-  await page.goto(`https://www.binance.com/en/nft/goods/sale/${config.PRODUCT_ID_TO_SALE}`)
+  await page.goto(
+    `https://www.binance.com/en/nft/goods/sale/${config.PRODUCT_ID_TO_SALE}`
+  );
 
   await page.waitForSelector(
     "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
@@ -191,22 +193,6 @@ pupExtra.launch(options).then(async (browser) => {
     "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
     "2"
   );
-
-  //
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(3)"
-  );
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(7)"
-  );
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(12) > div.css-q2wk8b > div:nth-child(1)"
-  );
-
-  //
 
   await cursor.click(
     "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-19xplxv"
