@@ -1,6 +1,7 @@
-const clc = require("cli-color");
 const path = require("path");
+const clear = require("clear");
 const figlet = require("figlet");
+const clc = require("cli-color");
 const fs = require("fs").promises;
 const inquirer = require("inquirer");
 const pupExtra = require("puppeteer-extra");
@@ -21,6 +22,8 @@ const {
 
 const isPkg = typeof process.pkg !== "undefined";
 
+clear();
+
 console.log(
   clc.yellow(
     figlet.textSync("Binance NFT bot by", {
@@ -31,7 +34,7 @@ console.log(
 
 console.log(
   clc.red(
-    figlet.textSync("NXND", {
+    figlet.textSync("NØXND", {
       font: "Slant",
     })
   )
@@ -90,7 +93,7 @@ pupExtra.launch(options).then(async (browser) => {
       message: "Amount",
       name: "amount",
       type: "number",
-      default: 1,
+      default: config.AMOUNT,
       when: ({ mode }) => mode === modes.MYSTERY_BOX,
     },
     {
@@ -118,15 +121,11 @@ pupExtra.launch(options).then(async (browser) => {
 
   console.log("\n");
 
-  logger.info("Initialiation...");
-
   let nftData = {};
 
   const page = await createPage(browser);
 
   const cursor = createCursor(page);
-
-  logger.info("Initialization completed.");
 
   // ------------------------
 
