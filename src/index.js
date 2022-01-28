@@ -34,11 +34,11 @@ console.log(
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
-      .executablePath()
-      .replace(
-        /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
-        path.join(path.dirname(process.execPath), "chromium")
-      )
+    .executablePath()
+    .replace(
+      /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+      path.join(path.dirname(process.execPath), "chromium")
+    )
   : pupExtra.executablePath();
 
 const args = [
@@ -55,7 +55,7 @@ pupExtra.use(StealthPlugin());
 
 const options = {
   args,
-  headless: true,
+  headless: false,
   ignoreHTTPSErrors: true,
   executablePath: chromiumExecutablePath,
 };
@@ -150,7 +150,7 @@ pupExtra.launch(options).then(async (browser) => {
   );
 
   await page.type(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > input",
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
     "999"
   );
 
