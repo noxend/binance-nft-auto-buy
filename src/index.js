@@ -25,17 +25,9 @@ const isPkg = typeof process.pkg !== "undefined";
 clear();
 
 console.log(
-  clc.yellow(
-    figlet.textSync("Binance NFT bot by", {
+  clc.cyan(
+    figlet.textSync("Binance NFT bot", {
       font: "Small Slant",
-    })
-  )
-);
-
-console.log(
-  clc.red(
-    figlet.textSync("NØXND", {
-      font: "Slant",
     })
   )
 );
@@ -151,59 +143,26 @@ pupExtra.launch(options).then(async (browser) => {
     `https://www.binance.com/en/nft/goods/sale/${config.PRODUCT_ID_TO_SALE}`
   );
 
-  await page.waitForSelector(
-    "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
-  );
+  await page.waitForSelector("body > div.css-vp41bv");
 
   await cursor.click(
-    "body > div.css-vp41bv > div > div > div.css-zadena > button.css-qzf033"
-  );
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(4) > div.css-193cfqa > div.css-17fr0o"
-  );
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(8) > div.css-1hjlitu > div:nth-child(3)"
-  );
-
-  await cursor.move('div[type="img"]');
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-suffix.css-vurnku > div > div.bn-input-md.css-1vd5j1n"
-  );
-
-  await cursor.click("#ETH");
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input"
+    "body > div.css-vp41bv > div > div > div.css-zadena > button.css-lolz04"
   );
 
   await page.type(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
-    "0.5"
+    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > input",
+    "999"
   );
 
   await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(6) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input"
+    "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-wfo2sb"
   );
 
-  await page.type(
-    "#__APP > div > div.css-tq0shg > main > div > div > div:nth-child(5) > div.inputNumber.css-vurnku > div > div.bn-input-prefix.css-vurnku > input",
-    "2"
+  await page.waitForSelector("body > div.css-vp41bv > div");
+
+  await page.click(
+    "body > div.css-vp41bv > div > div > div.css-sr9689 > button.css-1hqz9c5"
   );
-
-  await cursor.click(
-    "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-19xplxv"
-  );
-
-  await page.waitForSelector("body > div.css-vp41bv > div > svg");
-
-  await cursor.move("body > div.css-vp41bv > div > svg");
-
-  await cursor.move(".css-mh5cnv");
-
-  await page.click(".css-mh5cnv");
 
   const response1 = await page.waitForResponse(api.PRODUCT_ONSLACE);
 
@@ -271,7 +230,9 @@ const makePurchase = async (
 
   await waitToTime(triggerTime + timeOffset + -3000);
 
-  await page.click(".css-mh5cnv");
+  await page.click(
+    "body > div.css-vp41bv > div > div > div.css-sr9689 > button.css-1hqz9c5"
+  );
 
   const response = await page.waitForResponse(api.PRODUCT_ONSLACE);
   const headers = response.request().headers();
