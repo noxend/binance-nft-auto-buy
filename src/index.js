@@ -55,7 +55,7 @@ pupExtra.use(StealthPlugin());
 
 const options = {
   args,
-  headless: false,
+  headless: true,
   ignoreHTTPSErrors: true,
   executablePath: chromiumExecutablePath,
 };
