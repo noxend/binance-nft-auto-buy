@@ -34,11 +34,11 @@ console.log(
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
-    .executablePath()
-    .replace(
-      /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
-      path.join(path.dirname(process.execPath), "chromium")
-    )
+      .executablePath()
+      .replace(
+        /^.*?\\node_modules\\puppeteer\\\.local-chromium/,
+        path.join(path.dirname(process.execPath), "chromium")
+      )
   : pupExtra.executablePath();
 
 const args = [
@@ -158,7 +158,7 @@ pupExtra.launch(options).then(async (browser) => {
     "#__APP > div > div.css-tq0shg > main > div > div > div.css-7y16gy > button.css-wfo2sb"
   );
 
-  await page.waitForSelector("body > div.css-vp41bv > div");
+  await page.waitForXPath("body > div.css-vp41bv > div > div > h5");
 
   await page.click(
     "body > div.css-vp41bv > div > div > div.css-sr9689 > button.css-1hqz9c5"
