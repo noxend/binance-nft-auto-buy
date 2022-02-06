@@ -1,7 +1,7 @@
 const UserAgent = require("user-agents");
 
 const logger = require("./logger");
-const { api, TEST_START_TIME } = require("./constants");
+const { api } = require("./constants");
 
 const waitToTime = (timestamp) =>
   new Promise((resolve) => {
@@ -93,9 +93,8 @@ const createPage = async (browser) => {
   await page.setRequestInterception(true);
 
   page.on("request", (req) => {
-    if (req.url() === api.MYSTERY_BOX_PURCHASE) {
-      console.log("req", Date.now() - TEST_START_TIME);
-    }
+    // if (req.url() === api.ORDER_CREATE) {
+    // }
 
     if (
       req.resourceType() == "stylesheet" ||
@@ -118,8 +117,6 @@ const createPage = async (browser) => {
     }
 
     if (res.url() === api.MYSTERY_BOX_PURCHASE) {
-      console.log("res", Date.now() - TEST_START_TIME);
-
       res.json().then(({ success, message }) => {
         if (success) logger.info("🥳");
         else logger.warn(message);
