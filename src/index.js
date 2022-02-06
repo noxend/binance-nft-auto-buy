@@ -25,13 +25,13 @@ const isPkg = typeof process.pkg !== "undefined";
 
 clear();
 
-// console.log(
-//   clc.cyan(
-//     figlet.textSync("Binance NFT bot", {
-//       font: "Small Slant",
-//     })
-//   )
-// );
+console.log(
+  clc.cyan(
+    figlet.textSync("Binance NFT bot", {
+      font: "Small Slant",
+    })
+  )
+);
 
 const chromiumExecutablePath = isPkg
   ? pupExtra
