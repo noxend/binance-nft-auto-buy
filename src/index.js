@@ -13,7 +13,7 @@ const logger = require("./logger");
 const config = require("./config");
 const startTimeProgressBar = require("./progress-bar");
 const { getMysteryBoxDetails, getNFTDetails, authorization } = require("./api");
-const { api, modes } = require("./constants");
+const { api, modes, TEST_START_TIME } = require("./constants");
 const {
   waitToTimeSync,
   waitToTime,
@@ -220,7 +220,7 @@ pupExtra.launch(options).then(async (browser) => {
     case modes.MYSTERY_BOX:
       await makePurchase(page, {
         url: api.MYSTERY_BOX_PURCHASE,
-        triggerTime: nftData.startTime,
+        triggerTime: TEST_START_TIME,
         body: { number: answers.amount, productId: nftData.productId },
       });
 
@@ -250,7 +250,7 @@ const makePurchase = async (
   page,
   { url, triggerTime, body, timeOffset = 0 }
 ) => {
-  startTimeProgressBar(triggerTime + timeOffset + -3000);
+  startTimeProgressBar(triggerTime + timeOffset);
 
   await waitToTime(triggerTime + timeOffset + -3000);
 

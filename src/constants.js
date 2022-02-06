@@ -30,4 +30,6 @@ const modes = {
 modes.valuesToArray = () =>
   Object.values(modes).filter((value) => typeof value !== "function");
 
-module.exports = { api, pages, modes };
+const TEST_START_TIME = Date.now() + 60000;
+
+module.exports = { api, pages, modes, TEST_START_TIME };
