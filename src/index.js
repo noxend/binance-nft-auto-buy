@@ -1,3 +1,4 @@
+const axios = require("axios").default;
 const path = require("path");
 const clear = require("clear");
 const figlet = require("figlet");
@@ -61,6 +62,16 @@ const options = {
 };
 
 pupExtra.launch(options).then(async (browser) => {
+  console.log();
+
+  const futureMysteryBoxes = (
+    await axios.get(
+      "https://www.binance.com/bapi/nft/v1/public/nft/mystery-box/list?page=1&size=10"
+    )
+  ).data.data
+    .slice(0, 10)
+    .filter(({ startTime }) => startTime > Date.now());
+
   const answers = await inquirer.prompt([
     {
       type: "list",
@@ -70,6 +81,19 @@ pupExtra.launch(options).then(async (browser) => {
       name: "mode",
     },
     {
+      choices: futureMysteryBoxes.map(
+        ({ productId, name, currency, price }) => ({
+          value: productId,
+          name: `${name} (${price} ${currency})`,
+        })
+      ),
+      message: "Select mystery box",
+      name: "productId",
+      type: "list",
+      when: ({ mode }) => mode === modes.MYSTERY_BOX,
+    },
+    {
+      when: ({ productId }) => !productId,
       type: "input",
       message: "Please, enter product id",
       name: "productId",
