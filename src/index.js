@@ -220,7 +220,7 @@ pupExtra.launch(options).then(async (browser) => {
     case modes.MYSTERY_BOX:
       await makePurchase(page, {
         url: api.MYSTERY_BOX_PURCHASE,
-        triggerTime: TEST_START_TIME,
+        triggerTime: nftData.startTime,
         // timeOffset: -200,
         body: { number: answers.amount, productId: nftData.productId },
       });
