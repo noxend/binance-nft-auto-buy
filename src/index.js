@@ -268,19 +268,14 @@ const makePurchase = async (
   waitToTimeSync(triggerTime + timeOffset);
 
   return page.evaluate(
-    ({ url, body, headers, triggerTime }) => {
-      console.log("pup", "req", Date.now() - triggerTime);
-
+    ({ url, body, headers }) => {
       fetch(url, {
         body: JSON.stringify(body),
         method: "POST",
         headers,
-      }).then((res) => {
-        console.log("pup", "res", Date.now() - triggerTime);
-        return res.json();
-      });
+      }).then((res) => res.json());
     },
-    { url, body, headers, triggerTime }
+    { url, body, headers }
   );
 };
 
