@@ -108,11 +108,11 @@ const createPage = async (browser) => {
     req.continue();
   });
 
-  page.on("console", (msg) => {
-    if (msg.text().includes("pup")) {
-      console.log(msg.text());
-    }
-  });
+  // page.on("console", (msg) => {
+  //   if (msg.text().includes("pup")) {
+  //     console.log(msg.text());
+  //   }
+  // });
 
   page.on("response", (res) => {
     if (res.url() === api.ORDER_CREATE) {
