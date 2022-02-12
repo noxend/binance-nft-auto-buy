@@ -221,7 +221,7 @@ pupExtra.launch(options).then(async (browser) => {
       await makePurchase(page, {
         url: api.MYSTERY_BOX_PURCHASE,
         triggerTime: TEST_START_TIME,
-        timeOffset: -200,
+        // timeOffset: -200,
         body: { number: answers.amount, productId: nftData.productId },
       });
 
